@@ -1,7 +1,7 @@
 export const Colors = {
-  primary: '#6366f1', // Indigo
-  secondary: '#a855f7', // Purple
-  accent: '#f43f5e', // Rose
+  primary: '#6366f1',
+  secondary: '#a855f7',
+  accent: '#f43f5e',
   background: '#f8fafc',
   card: '#ffffff',
   text: '#0f172a',
@@ -11,7 +11,10 @@ export const Colors = {
   error: '#ef4444',
   white: '#ffffff',
   black: '#000000',
-  gradient: ['#6366f1', '#a855f7'],
+  gradient: ['#6366f1', '#a855f7'] as const,
+  tint: '#6366f1',
+  tabIconDefault: '#94a3b8',
+  tabIconSelected: '#6366f1',
 };
 
 export const Spacing = {
@@ -46,6 +49,6 @@ export const Typography = {
   },
   caption: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: '#64748b',
   },
 };
