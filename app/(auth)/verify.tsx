@@ -84,18 +84,26 @@ export default function VerifyScreen() {
     setLoading(true);
     try {
       const response = await authService.verifyOtp(userId as string, otpCode);
+      console.log('Verify OTP Response:', response);
+      
       if (response.success) {
-        const { access_token, user } = response.body;
-        await SecureStore.setItemAsync('userToken', access_token);
-        await SecureStore.setItemAsync('userData', JSON.stringify(user));
+        const { access_token, user } = response.data;
+        if (Platform.OS === 'web') {
+          localStorage.setItem('userToken', access_token || '');
+          localStorage.setItem('userData', JSON.stringify(user || {}));
+        } else {
+          await SecureStore.setItemAsync('userToken', access_token || '');
+          await SecureStore.setItemAsync('userData', JSON.stringify(user || {}));
+        }
+        console.log('Routing to /(tabs)...');
         router.replace('/(tabs)');
       } else {
         Alert.alert('Invalid OTP', response.message || 'Please check the code and try again');
-        // Clear the inputs on failure
         setOtp(new Array(OTP_LENGTH).fill(''));
         inputRefs.current[0]?.focus();
       }
     } catch (err: any) {
+      console.error('Verify OTP Error:', err);
       const msg = err?.response?.data?.message || err.message || 'Verification failed';
       Alert.alert('Error', msg);
     } finally {

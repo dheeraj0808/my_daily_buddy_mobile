@@ -73,7 +73,7 @@ export default function RegisterScreen() {
       if (response.success) {
         router.push({
           pathname: '/(auth)/verify',
-          params: { userId: response.body.userId, email: formData.email.trim() },
+          params: { userId: response.data.userId, email: formData.email.trim() },
         });
       } else {
         Alert.alert('Error', response.message || 'Registration failed');

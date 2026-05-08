@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { Platform } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
@@ -18,7 +19,12 @@ export default function RootLayout() {
 
   const checkAuth = async () => {
     try {
-      const token = await SecureStore.getItemAsync('userToken');
+      let token = null;
+      if (Platform.OS === 'web') {
+        token = localStorage.getItem('userToken');
+      } else {
+        token = await SecureStore.getItemAsync('userToken');
+      }
       setIsAuthenticated(!!token);
     } catch {
       setIsAuthenticated(false);

@@ -39,27 +39,22 @@ export default function LoginScreen() {
 
     setLoading(true);
     try {
-      const response = await authService.login(email.trim());
+      let response = await authService.login(email.trim());
 
-      // Backend returns success=true even for non-existent users (security by design)
-      // But userId will only be present if OTP was actually sent
-      if (response.success && response.body?.userId) {
+      // If login returns success but no userId, it means the user doesn't exist or is unverified.
+      // To provide a seamless flow, we auto-register them (which just sends an OTP and returns userId).
+      if (response.success && !response.data?.userId) {
+        response = await authService.register({ email: email.trim() });
+      }
+
+      // Now we should have a userId from either login or register
+      if (response.success && response.data?.userId) {
         router.push({
           pathname: '/(auth)/verify',
-          params: { userId: response.body.userId, email: email.trim() },
+          params: { userId: response.data.userId, email: email.trim() },
         });
-      } else if (response.success && !response.body?.userId) {
-        // User not registered or not verified — guide them to register
-        Alert.alert(
-          'Account Not Found',
-          'No verified account found with this email. Please create an account first.',
-          [
-            { text: 'Register', onPress: () => router.push('/(auth)/register'), style: 'default' },
-            { text: 'Cancel', style: 'cancel' },
-          ]
-        );
       } else {
-        Alert.alert('Login Failed', response.body || 'Something went wrong');
+        Alert.alert('Login Failed', response.message || 'Something went wrong');
       }
     } catch (err: any) {
       const msg =
