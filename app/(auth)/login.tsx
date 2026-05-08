@@ -9,7 +9,6 @@ import {
   Platform,
   ScrollView,
   Alert,
-  Dimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -18,16 +17,13 @@ import { CustomButton } from '../../components/CustomButton';
 import { Colors, Spacing, BorderRadius } from '../../constants/Colors';
 import authService from '../../services/authService';
 
-const { width } = Dimensions.get('window');
-
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const validateEmail = (value: string) => {
-    const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return regex.test(value);
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
   };
 
   const handleLogin = async () => {
@@ -44,16 +40,32 @@ export default function LoginScreen() {
     setLoading(true);
     try {
       const response = await authService.login(email.trim());
-      if (response.success) {
+
+      // Backend returns success=true even for non-existent users (security by design)
+      // But userId will only be present if OTP was actually sent
+      if (response.success && response.body?.userId) {
         router.push({
           pathname: '/(auth)/verify',
           params: { userId: response.body.userId, email: email.trim() },
         });
+      } else if (response.success && !response.body?.userId) {
+        // User not registered or not verified — guide them to register
+        Alert.alert(
+          'Account Not Found',
+          'No verified account found with this email. Please create an account first.',
+          [
+            { text: 'Register', onPress: () => router.push('/(auth)/register'), style: 'default' },
+            { text: 'Cancel', style: 'cancel' },
+          ]
+        );
       } else {
-        Alert.alert('Login Failed', response.message || 'Something went wrong');
+        Alert.alert('Login Failed', response.body || 'Something went wrong');
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.message || err.message || 'Connection error. Is the backend running?';
+      const msg =
+        err?.response?.data?.message ||
+        err.message ||
+        'Connection error. Is the backend running?';
       Alert.alert('Error', msg);
     } finally {
       setLoading(false);
@@ -71,61 +83,60 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero / Brand Section */}
+          {/* Hero */}
           <LinearGradient
             colors={['#6366f1', '#8b5cf6', '#a855f7']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            style={styles.heroSection}
+            style={styles.hero}
           >
-            <View style={styles.heroContent}>
-              <Text style={styles.brandIcon}>🌟</Text>
-              <Text style={styles.brandName}>My Daily Buddy</Text>
-              <Text style={styles.brandTagline}>Your personal productivity companion</Text>
-            </View>
+            <Text style={styles.heroIcon}>🌟</Text>
+            <Text style={styles.heroTitle}>My Daily Buddy</Text>
+            <Text style={styles.heroSub}>Your personal productivity companion</Text>
             <View style={styles.heroCurve} />
           </LinearGradient>
 
-          {/* Form Section */}
+          {/* Form */}
           <View style={styles.formSection}>
             <Text style={styles.title}>Welcome Back</Text>
             <Text style={styles.subtitle}>
-              Sign in with your email to receive a one-time verification code
+              Enter your email to receive a one-time verification code
             </Text>
 
-            <View style={styles.form}>
-              <CustomInput
-                label="Email Address"
-                placeholder="you@example.com"
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  if (error) setError('');
-                }}
-                keyboardType="email-address"
-                error={error}
-              />
+            <CustomInput
+              label="Email Address"
+              placeholder="you@example.com"
+              value={email}
+              onChangeText={(text) => {
+                setEmail(text);
+                if (error) setError('');
+              }}
+              keyboardType="email-address"
+              error={error}
+            />
 
-              <CustomButton
-                title="Send Verification Code"
-                onPress={handleLogin}
-                loading={loading}
-                disabled={!email.trim()}
-                style={styles.button}
-              />
-            </View>
+            <CustomButton
+              title="Send Verification Code"
+              onPress={handleLogin}
+              loading={loading}
+              disabled={!email.trim()}
+              style={styles.primaryBtn}
+            />
 
-            <View style={styles.dividerContainer}>
+            {/* Divider */}
+            <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>New here?</Text>
               <View style={styles.dividerLine} />
             </View>
 
-            <CustomButton
-              title="Create an Account"
-              onPress={() => router.push('/(auth)/register')}
-              variant="outline"
-            />
+            {/* Small text link — same style as register's Sign In */}
+            <View style={styles.registerRow}>
+              <Text style={styles.registerText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+                <Text style={styles.registerLink}>Create Account</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -138,78 +149,71 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  flex: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
+  flex: { flex: 1 },
+  scrollContent: { flexGrow: 1 },
+
   // ── Hero ──
-  heroSection: {
-    paddingTop: 60,
-    paddingBottom: 50,
+  hero: {
+    paddingTop: 56,
+    paddingBottom: 48,
     alignItems: 'center',
-    position: 'relative',
     overflow: 'hidden',
+    position: 'relative',
   },
-  heroContent: {
-    alignItems: 'center',
-    zIndex: 1,
-  },
-  brandIcon: {
-    fontSize: 48,
+  heroIcon: {
+    fontSize: 44,
     marginBottom: Spacing.sm,
   },
-  brandName: {
-    fontSize: 28,
+  heroTitle: {
+    fontSize: 26,
     fontWeight: '800',
-    color: '#ffffff',
-    letterSpacing: 0.5,
+    color: '#fff',
+    letterSpacing: 0.3,
   },
-  brandTagline: {
-    fontSize: 14,
+  heroSub: {
+    fontSize: 13,
     color: 'rgba(255,255,255,0.8)',
-    marginTop: Spacing.xs,
+    marginTop: 4,
   },
   heroCurve: {
     position: 'absolute',
-    bottom: -20,
+    bottom: -18,
     left: 0,
     right: 0,
-    height: 40,
+    height: 36,
     backgroundColor: Colors.background,
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
   },
+
   // ── Form ──
   formSection: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: Spacing.lg,
     paddingBottom: Spacing.xxl,
   },
   title: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: '700',
     color: Colors.text,
-    marginBottom: Spacing.xs,
+    marginBottom: 4,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.textSecondary,
-    lineHeight: 20,
-    marginBottom: Spacing.xl,
+    lineHeight: 19,
+    marginBottom: Spacing.lg,
   },
-  form: {
-    width: '100%',
+  primaryBtn: {
+    marginTop: Spacing.sm,
   },
-  button: {
-    marginTop: Spacing.md,
-  },
+
   // ── Divider ──
-  dividerContainer: {
+  divider: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: Spacing.lg,
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.md,
   },
   dividerLine: {
     flex: 1,
@@ -217,8 +221,25 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.border,
   },
   dividerText: {
+    fontSize: 12,
     color: Colors.textSecondary,
-    fontSize: 13,
     marginHorizontal: Spacing.md,
+  },
+
+  // ── Register link (small — like register page's "Sign In") ──
+  registerRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: Spacing.sm,
+  },
+  registerText: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+  },
+  registerLink: {
+    color: Colors.primary,
+    fontWeight: '700',
+    fontSize: 14,
   },
 });
