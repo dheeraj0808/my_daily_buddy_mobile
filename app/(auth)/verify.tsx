@@ -26,6 +26,14 @@ export default function VerifyScreen() {
   const { userId, email } = useLocalSearchParams();
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
+  // Auto-focus first input when screen mounts
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      inputRefs.current[0]?.focus();
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, []);
+
   // Resend countdown timer
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -36,7 +44,6 @@ export default function VerifyScreen() {
   }, [resendCooldown]);
 
   const handleChange = (text: string, index: number) => {
-    // Only allow digits
     const digit = text.replace(/[^0-9]/g, '');
     if (!digit && text !== '') return;
 
@@ -44,9 +51,17 @@ export default function VerifyScreen() {
     newOtp[index] = digit;
     setOtp(newOtp);
 
-    // Auto-advance to next input
+    // Auto-advance to next box
     if (digit && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
+    }
+
+    // Auto-submit when all 6 digits entered
+    if (digit && index === OTP_LENGTH - 1) {
+      const filled = newOtp.join('');
+      if (filled.length === OTP_LENGTH) {
+        handleVerifyCode(filled);
+      }
     }
   };
 
@@ -59,8 +74,8 @@ export default function VerifyScreen() {
     }
   };
 
-  const handleVerify = async () => {
-    const otpCode = otp.join('');
+  const handleVerifyCode = async (code?: string) => {
+    const otpCode = code ?? otp.join('');
     if (otpCode.length !== OTP_LENGTH) {
       Alert.alert('Error', `Please enter the full ${OTP_LENGTH}-digit code`);
       return;
@@ -76,6 +91,9 @@ export default function VerifyScreen() {
         router.replace('/(tabs)');
       } else {
         Alert.alert('Invalid OTP', response.message || 'Please check the code and try again');
+        // Clear the inputs on failure
+        setOtp(new Array(OTP_LENGTH).fill(''));
+        inputRefs.current[0]?.focus();
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || err.message || 'Verification failed';
@@ -91,9 +109,9 @@ export default function VerifyScreen() {
       await authService.resendOtp(userId as string);
       setResendCooldown(30);
       setOtp(new Array(OTP_LENGTH).fill(''));
-      inputRefs.current[0]?.focus();
-      Alert.alert('Sent', 'A new OTP has been sent to your email');
-    } catch (err: any) {
+      setTimeout(() => inputRefs.current[0]?.focus(), 100);
+      Alert.alert('Sent ✅', 'A new OTP has been sent to your email');
+    } catch {
       Alert.alert('Error', 'Failed to resend OTP. Please try again.');
     }
   };
@@ -142,16 +160,15 @@ export default function VerifyScreen() {
                 keyboardType="number-pad"
                 maxLength={1}
                 selectTextOnFocus
-                autoFocus={index === 0}
               />
             ))}
           </View>
 
           <CustomButton
-            title="Verify & Continue"
-            onPress={handleVerify}
+            title={loading ? 'Verifying...' : 'Verify & Continue'}
+            onPress={() => handleVerifyCode()}
             loading={loading}
-            disabled={otp.join('').length !== OTP_LENGTH}
+            disabled={otp.join('').length !== OTP_LENGTH || loading}
             style={styles.button}
           />
 
@@ -161,13 +178,16 @@ export default function VerifyScreen() {
             onPress={handleResend}
             disabled={resendCooldown > 0}
           >
-            <Text style={styles.resendText}>
-              {resendCooldown > 0
-                ? `Resend code in ${resendCooldown}s`
-                : "Didn't receive the code? "}
-            </Text>
-            {resendCooldown <= 0 && (
-              <Text style={styles.resendLink}>Resend</Text>
+            {resendCooldown > 0 ? (
+              <Text style={styles.resendText}>
+                Resend code in{' '}
+                <Text style={styles.resendCountdown}>{resendCooldown}s</Text>
+              </Text>
+            ) : (
+              <Text style={styles.resendText}>
+                Didn't receive the code?{' '}
+                <Text style={styles.resendLink}>Resend</Text>
+              </Text>
             )}
           </TouchableOpacity>
         </View>
@@ -200,7 +220,6 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: '600',
   },
-  // ── Icon ──
   iconContainer: {
     alignItems: 'center',
     marginBottom: Spacing.lg,
@@ -233,7 +252,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.primary,
   },
-  // ── OTP ──
   otpContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -251,7 +269,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     color: Colors.text,
-    // Shadow
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
@@ -265,19 +282,21 @@ const styles = StyleSheet.create({
   button: {
     marginTop: Spacing.sm,
   },
-  // ── Resend ──
   resendButton: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
     marginTop: Spacing.xl,
+    paddingVertical: Spacing.sm,
   },
   resendText: {
     color: Colors.textSecondary,
     fontSize: 14,
   },
+  resendCountdown: {
+    color: Colors.primary,
+    fontWeight: '700',
+  },
   resendLink: {
     color: Colors.primary,
     fontWeight: '700',
-    fontSize: 14,
   },
 });
