@@ -37,7 +37,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (!isReady) return;
     if (isAuthenticated) {
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/dashboard');
     }
     // else: stay on the landing page (auth)/index
   }, [isReady, isAuthenticated]);
