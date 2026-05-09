@@ -1,14 +1,14 @@
 import React from 'react';
-import { 
-  View, 
-  TextInput, 
-  Text, 
-  StyleSheet, 
-  ViewStyle 
+import {
+  View,
+  TextInput,
+  Text,
+  StyleSheet,
+  ViewStyle,
 } from 'react-native';
-import { Colors, BorderRadius, Spacing } from '../constants/Colors';
+import { Colors, BorderRadius, Spacing } from '../../constants/Colors';
 
-interface CustomInputProps {
+interface InputProps {
   label?: string;
   placeholder: string;
   value: string;
@@ -19,7 +19,7 @@ interface CustomInputProps {
   containerStyle?: ViewStyle;
 }
 
-export const CustomInput: React.FC<CustomInputProps> = ({
+export const Input: React.FC<InputProps> = ({
   label,
   placeholder,
   value,
@@ -69,12 +69,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     justifyContent: 'center',
-    // Shadow for iOS
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
-    // Elevation for Android
     elevation: 2,
   },
   input: {

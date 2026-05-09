@@ -1,16 +1,16 @@
 import React from 'react';
-import { 
-  TouchableOpacity, 
-  Text, 
-  StyleSheet, 
+import {
+  TouchableOpacity,
+  Text,
+  StyleSheet,
   ActivityIndicator,
   ViewStyle,
-  TextStyle 
+  TextStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, BorderRadius, Spacing } from '../constants/Colors';
+import { Colors, BorderRadius, Spacing } from '../../constants/Colors';
 
-interface CustomButtonProps {
+interface ButtonProps {
   title: string;
   onPress: () => void;
   loading?: boolean;
@@ -20,7 +20,7 @@ interface CustomButtonProps {
   textStyle?: TextStyle;
 }
 
-export const CustomButton: React.FC<CustomButtonProps> = ({
+export const Button: React.FC<ButtonProps> = ({
   title,
   onPress,
   loading = false,

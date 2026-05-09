@@ -1,17 +1,17 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
   TextInput,
-  ActivityIndicator,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../../services/authService';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -20,6 +20,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notRegistered, setNotRegistered] = useState(false);
 
   const isReady = email.trim().length > 0 && !loading;
 
@@ -30,6 +31,7 @@ export default function LoginScreen() {
       return;
     }
     setError('');
+    setNotRegistered(false);
     setLoading(true);
     try {
       const result = await authService.login(trimmed);
@@ -39,8 +41,13 @@ export default function LoginScreen() {
         params: { userId, email: trimmed, source: 'login' },
       });
     } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg[0] : (msg || 'Failed to send OTP. Please try again.'));
+      if (err?.response?.status === 404) {
+        setNotRegistered(true);
+        setError('User not found , pleaser create an account first');
+      } else {
+        const msg = err?.response?.data?.message;
+        setError(Array.isArray(msg) ? msg[0] : (msg || 'Failed to send OTP. Please try again.'));
+      }
     } finally {
       setLoading(false);
     }
@@ -78,7 +85,16 @@ export default function LoginScreen() {
               returnKeyType="done"
               onSubmitEditing={handleSendOTP}
             />
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            {error ? (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
+                {notRegistered && (
+                  <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+                    <Text style={styles.errorSignUpLink}>Create an account →</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : null}
 
             <TouchableOpacity
               activeOpacity={0.85}
@@ -184,10 +200,18 @@ const styles = StyleSheet.create({
     borderColor: '#ef4444',
     backgroundColor: '#fff5f5',
   },
+  errorBox: {
+    marginTop: 6,
+    gap: 4,
+  },
   errorText: {
     fontSize: 13,
     color: '#ef4444',
-    marginTop: 4,
+  },
+  errorSignUpLink: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6366f1',
   },
   btnWrapper: {
     marginTop: 20,
