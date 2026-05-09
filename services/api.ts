@@ -1,22 +1,31 @@
 import axios from 'axios';
 
+import { getApiBaseUrl } from '@/constants/config';
+import { storage } from '@/utils/storage';
+
 /**
- * API Configuration for Mobile App
- * 
- * IMPORTANT FOR MOBILE TESTING:
- * - iOS Simulator: Use 'http://localhost:3001/api'
- * - Android Emulator: Use 'http://10.0.2.2:3001/api'
- * - Physical Device: Use your computer's IP (e.g., 'http://192.168.1.5:3001/api')
+ * Base URL: see `constants/config.ts` (`EXPO_PUBLIC_API_URL` or `expo.extra.apiUrl`).
+ * Device testing: point EXPO_PUBLIC_API_URL at your machine (e.g. http://192.168.x.x:5001/api).
  */
 
-const BASE_URL = 'http://localhost:5001/api';
-
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
+// Request interceptor — attach JWT Bearer token from secure storage
+api.interceptors.request.use(
+  async (config) => {
+    const token = await storage.getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
 // Response interceptor for easy debugging
 api.interceptors.response.use(

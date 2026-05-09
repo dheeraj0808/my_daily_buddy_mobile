@@ -3,8 +3,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 
 import { HapticTab } from '@/components/shared/HapticTab';
-
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+import { TAB_SCREENS, type IoniconName } from '@/constants/tabScreens';
 
 function TabIcon({
   name,
@@ -46,51 +45,18 @@ export default function TabLayout() {
         },
       }}
     >
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="home" color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="reminders"
-        options={{
-          title: 'Reminders',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="alarm" color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="habits"
-        options={{
-          title: 'Habits',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="checkmark-circle" color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="health"
-        options={{
-          title: 'Health',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="heart" color={color} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Profile',
-          tabBarIcon: ({ color, focused }) => (
-            <TabIcon name="person" color={color} focused={focused} />
-          ),
-        }}
-      />
+      {TAB_SCREENS.map((tab) => (
+        <Tabs.Screen
+          key={tab.name}
+          name={tab.name}
+          options={{
+            title: tab.title,
+            tabBarIcon: ({ color, focused }) => (
+              <TabIcon name={tab.icon} color={color} focused={focused} />
+            ),
+          }}
+        />
+      ))}
     </Tabs>
   );
 }
