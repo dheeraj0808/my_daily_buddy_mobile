@@ -7,18 +7,43 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { authService } from '../../services/authService';
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleContinue = () => {
-    // We will implement the actual API logic later
-    console.log('Login attempt with:', email);
+  const isReady = email.trim().length > 0 && !loading;
+
+  const handleSendOTP = async () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!EMAIL_REGEX.test(trimmed)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const result = await authService.login(trimmed);
+      const userId = result?.data?.userId;
+      router.push({
+        pathname: '/(auth)/verify-otp',
+        params: { userId, email: trimmed, source: 'login' },
+      });
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      setError(Array.isArray(msg) ? msg[0] : (msg || 'Failed to send OTP. Please try again.'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -27,69 +52,62 @@ export default function LoginScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.flex}
       >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View style={styles.header}>
-            <TouchableOpacity 
-              style={styles.backButton} 
-              onPress={() => router.back()}
-            >
-              <Text style={styles.backButtonText}>←</Text>
-            </TouchableOpacity>
+        <View style={styles.content}>
+          {/* Brand */}
+          <View style={styles.brand}>
+            <View style={styles.logoCircle}>
+              <Text style={styles.logoText}>DA</Text>
+            </View>
+            <Text style={styles.appName}>Daily Life Assistant</Text>
+            <Text style={styles.tagline}>Manage your routine and habits easily</Text>
           </View>
 
           {/* Form */}
-          <View style={styles.formSection}>
-            <View style={styles.iconContainer}>
-              <Text style={styles.icon}>👋</Text>
-            </View>
-            
-            <Text style={styles.title}>Welcome Back</Text>
-            <Text style={styles.subtitle}>
-              Log in to your account to continue your daily routine and track your habits.
-            </Text>
+          <View style={styles.form}>
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput
+              style={[styles.input, error ? styles.inputError : null]}
+              placeholder="you@example.com"
+              placeholderTextColor="#94a3b8"
+              value={email}
+              onChangeText={(t) => { setEmail(t); setError(''); }}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoFocus
+              returnKeyType="done"
+              onSubmitEditing={handleSendOTP}
+            />
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.inputLabel}>Email Address</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="hello@example.com"
-                placeholderTextColor="#94a3b8"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            <TouchableOpacity 
-              activeOpacity={0.8} 
-              onPress={handleContinue}
-              disabled={!email.trim()}
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleSendOTP}
+              disabled={!isReady}
+              style={styles.btnWrapper}
             >
               <LinearGradient
-                colors={email.trim() ? ['#6366f1', '#4f46e5'] : ['#cbd5e1', '#94a3b8']}
+                colors={isReady ? ['#6366f1', '#4f46e5'] : ['#e2e8f0', '#cbd5e1']}
                 start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.submitButton}
+                end={{ x: 1, y: 0 }}
+                style={styles.button}
               >
-                <Text style={styles.submitButtonText}>Continue with Email</Text>
+                {loading
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={[styles.btnText, !isReady && styles.btnTextDisabled]}>Send OTP</Text>
+                }
               </LinearGradient>
             </TouchableOpacity>
-
-            <View style={styles.footerRow}>
-              <Text style={styles.footerText}>Don't have an account?</Text>
-              <TouchableOpacity onPress={() => console.log('Go to register')}>
-                <Text style={styles.footerLink}> Sign Up</Text>
-              </TouchableOpacity>
-            </View>
           </View>
-        </ScrollView>
+
+          {/* Footer */}
+          <View style={styles.footer}>
+            <Text style={styles.footerText}>Don't have an account?</Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+              <Text style={styles.footerLink}> Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -100,99 +118,104 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
   },
-  flex: { flex: 1 },
-  scrollContent: { 
-    flexGrow: 1,
+  flex: {
+    flex: 1,
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backButtonText: {
-    fontSize: 20,
-    color: '#0f172a',
-    fontWeight: '600',
-  },
-  formSection: {
+  content: {
+    flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 20,
-    paddingBottom: 40,
+    justifyContent: 'center',
+    gap: 40,
   },
-  iconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#e0e7ff',
+  // Brand section
+  brand: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  logoCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#eef2ff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 24,
+    marginBottom: 4,
   },
-  icon: {
-    fontSize: 28,
+  logoText: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#6366f1',
+    letterSpacing: 1,
   },
-  title: {
-    fontSize: 28,
+  appName: {
+    fontSize: 26,
     fontWeight: '800',
     color: '#0f172a',
-    marginBottom: 8,
     letterSpacing: -0.5,
+    textAlign: 'center',
   },
-  subtitle: {
-    fontSize: 15,
+  tagline: {
+    fontSize: 14,
     color: '#64748b',
-    lineHeight: 22,
-    marginBottom: 32,
+    textAlign: 'center',
+    lineHeight: 20,
   },
-  inputContainer: {
-    marginBottom: 24,
+  // Form
+  form: {
+    gap: 6,
   },
-  inputLabel: {
+  label: {
     fontSize: 14,
     fontWeight: '600',
     color: '#334155',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   input: {
     height: 54,
     backgroundColor: '#f8fafc',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#e2e8f0',
     borderRadius: 12,
     paddingHorizontal: 16,
     fontSize: 16,
     color: '#0f172a',
   },
-  submitButton: {
+  inputError: {
+    borderColor: '#ef4444',
+    backgroundColor: '#fff5f5',
+  },
+  errorText: {
+    fontSize: 13,
+    color: '#ef4444',
+    marginTop: 4,
+  },
+  btnWrapper: {
+    marginTop: 20,
+  },
+  button: {
     height: 56,
     borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
-    shadowColor: '#4f46e5',
+    shadowColor: '#6366f1',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 8,
     elevation: 4,
   },
-  submitButtonText: {
+  btnText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#ffffff',
   },
-  footerRow: {
+  btnTextDisabled: {
+    color: '#94a3b8',
+  },
+  // Footer
+  footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 32,
   },
   footerText: {
     fontSize: 14,
@@ -201,6 +224,6 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#4f46e5',
+    color: '#6366f1',
   },
 });
