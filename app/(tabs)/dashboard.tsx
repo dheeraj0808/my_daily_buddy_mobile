@@ -1,93 +1,147 @@
-import React from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  SafeAreaView, 
-  TouchableOpacity 
-} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { CheckCircle2, Circle, Clock, Flame } from 'lucide-react-native';
-import { Colors, Spacing, Typography, BorderRadius } from '../../constants/Colors';
+import React from 'react';
+import {
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
-const MOCK_ROUTINES = [
-  { id: '1', title: 'Morning Exercise', time: '07:00 AM', completed: true, category: 'Health' },
-  { id: '2', title: 'Deep Work Session', time: '09:00 AM', completed: false, category: 'Work' },
-  { id: '3', title: 'Read 10 Pages', time: '08:00 PM', completed: false, category: 'Personal' },
+const TASKS = [
+  { id: '1', title: 'Morning Yoga', time: '07:00 AM', done: true, color: '#10b981' },
+  { id: '2', title: 'Team Standup', time: '09:30 AM', done: true, color: '#6366f1' },
+  { id: '3', title: 'Deep Work Session', time: '11:00 AM', done: false, color: '#6366f1' },
+  { id: '4', title: 'Drink 2L Water', time: '02:00 PM', done: false, color: '#0ea5e9' },
+  { id: '5', title: 'Evening Walk', time: '06:00 PM', done: false, color: '#f59e0b' },
 ];
+
+function getGreeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good Morning';
+  if (h < 17) return 'Good Afternoon';
+  return 'Good Evening';
+}
+
+function getDate() {
+  return new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+const done = TASKS.filter((t) => t.done).length;
+const total = TASKS.length;
+const pct = Math.round((done / total) * 100);
 
 export default function HomeScreen() {
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Header Section */}
+    <SafeAreaView style={styles.safe}>
+      <ScrollView
+        contentContainerStyle={styles.scroll}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Good Morning,</Text>
-            <Text style={styles.userName}>Dheeraj Singh</Text>
+            <Text style={styles.greeting}>{getGreeting()} 👋</Text>
+            <Text style={styles.name}>Dheeraj Singh</Text>
+            <Text style={styles.date}>{getDate()}</Text>
           </View>
-          <TouchableOpacity style={styles.profileButton}>
-            <View style={styles.profilePlaceholder} />
-          </TouchableOpacity>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>DS</Text>
+          </View>
         </View>
 
-        {/* Stats Section */}
-        <View style={styles.statsContainer}>
-          <LinearGradient colors={['#6366f1', '#8b5cf6']} style={styles.statsCard}>
-            <View style={styles.statItem}>
-              <Flame size={24} color={Colors.white} />
-              <Text style={styles.statValue}>12</Text>
-              <Text style={styles.statLabel}>Day Streak</Text>
-            </View>
-            <View style={styles.statDivider} />
-            <View style={styles.statItem}>
-              <CheckCircle2 size={24} color={Colors.white} />
-              <Text style={styles.statValue}>85%</Text>
-              <Text style={styles.statLabel}>Completed</Text>
-            </View>
-          </LinearGradient>
+        {/* Progress card */}
+        <LinearGradient
+          colors={['#6366f1', '#8b5cf6']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.progressCard}
+        >
+          <Text style={styles.progressLabel}>Today's Progress</Text>
+          <Text style={styles.progressPct}>{pct}%</Text>
+          <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: `${pct}%` }]} />
+          </View>
+          <Text style={styles.progressSub}>
+            {done} of {total} tasks completed
+          </Text>
+        </LinearGradient>
+
+        {/* Stats row */}
+        <View style={styles.statsRow}>
+          <View style={[styles.statCard, { borderTopColor: '#f59e0b' }]}>
+            <Text style={styles.statIcon}>🔥</Text>
+            <Text style={styles.statNum}>12</Text>
+            <Text style={styles.statLabel}>Day Streak</Text>
+          </View>
+          <View style={[styles.statCard, { borderTopColor: '#10b981' }]}>
+            <Text style={styles.statIcon}>✅</Text>
+            <Text style={styles.statNum}>{pct}%</Text>
+            <Text style={styles.statLabel}>Completed</Text>
+          </View>
+          <View style={[styles.statCard, { borderTopColor: '#6366f1' }]}>
+            <Text style={styles.statIcon}>⏰</Text>
+            <Text style={styles.statNum}>3</Text>
+            <Text style={styles.statLabel}>Reminders</Text>
+          </View>
         </View>
 
-        {/* Today's Routines */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Routines</Text>
-          <TouchableOpacity>
-            <Text style={styles.seeAll}>See All</Text>
-          </TouchableOpacity>
-        </View>
+        {/* Today's schedule */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Today's Schedule</Text>
+            <TouchableOpacity>
+              <Text style={styles.seeAll}>See All</Text>
+            </TouchableOpacity>
+          </View>
 
-        {MOCK_ROUTINES.map((item) => (
-          <TouchableOpacity key={item.id} style={styles.routineCard}>
-            <View style={[styles.categoryIndicator, { backgroundColor: item.completed ? Colors.success : Colors.primary }]} />
-            <View style={styles.routineInfo}>
-              <Text style={styles.routineTitle}>{item.title}</Text>
-              <View style={styles.timeContainer}>
-                <Clock size={14} color={Colors.textSecondary} />
-                <Text style={styles.routineTime}>{item.time}</Text>
+          {TASKS.map((task) => (
+            <View key={task.id} style={styles.taskCard}>
+              <View style={[styles.taskDot, { backgroundColor: task.color }]} />
+              <View style={styles.taskInfo}>
+                <Text style={[styles.taskTitle, task.done && styles.taskDone]}>
+                  {task.title}
+                </Text>
+                <Text style={styles.taskTime}>{task.time}</Text>
+              </View>
+              <View
+                style={[
+                  styles.taskCheck,
+                  task.done && { backgroundColor: '#10b981', borderColor: '#10b981' },
+                ]}
+              >
+                {task.done && <Text style={styles.taskCheckMark}>✓</Text>}
               </View>
             </View>
-            <View style={styles.statusIcon}>
-              {item.completed ? (
-                <CheckCircle2 size={24} color={Colors.success} />
-              ) : (
-                <Circle size={24} color={Colors.border} />
-              )}
-            </View>
-          </TouchableOpacity>
-        ))}
+          ))}
+        </View>
 
-        {/* Quick Action Area */}
-        <View style={styles.quickActionContainer}>
+        {/* Quick actions */}
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionGrid}>
-            <TouchableOpacity style={styles.actionItem}>
-              <Text style={styles.actionEmoji}>📝</Text>
-              <Text style={styles.actionLabel}>Add Task</Text>
+          <View style={styles.actionsRow}>
+            <TouchableOpacity style={styles.actionBtn}>
+              <LinearGradient colors={['#6366f1', '#8b5cf6']} style={styles.actionGrad}>
+                <Text style={styles.actionEmoji}>⏰</Text>
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Add{'\n'}Reminder</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.actionItem}>
-              <Text style={styles.actionEmoji}>🏃</Text>
-              <Text style={styles.actionLabel}>New Habit</Text>
+            <TouchableOpacity style={styles.actionBtn}>
+              <LinearGradient colors={['#10b981', '#059669']} style={styles.actionGrad}>
+                <Text style={styles.actionEmoji}>📋</Text>
+              </LinearGradient>
+              <Text style={styles.actionLabel}>New{'\n'}Habit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.actionBtn}>
+              <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.actionGrad}>
+                <Text style={styles.actionEmoji}>❤️</Text>
+              </LinearGradient>
+              <Text style={styles.actionLabel}>Log{'\n'}Health</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -97,151 +151,122 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  scrollContent: {
-    padding: Spacing.lg,
-  },
+  safe: { flex: 1, backgroundColor: '#f8fafc' },
+  scroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  greeting: { fontSize: 15, color: '#64748b', fontWeight: '500' },
+  name: { fontSize: 24, fontWeight: '800', color: '#0f172a', marginTop: 2 },
+  date: { fontSize: 13, color: '#94a3b8', marginTop: 2 },
+  avatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#eef2ff',
     alignItems: 'center',
-    marginBottom: Spacing.xl,
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#6366f1',
   },
-  greeting: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: Colors.text,
-  },
-  profileButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.white,
-    padding: 2,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  profilePlaceholder: {
-    flex: 1,
+  avatarText: { fontSize: 15, fontWeight: '800', color: '#6366f1' },
+  progressCard: {
     borderRadius: 20,
-    backgroundColor: Colors.border,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
-  statsContainer: {
-    marginBottom: Spacing.xl,
+  progressLabel: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
+  progressPct: { fontSize: 40, fontWeight: '800', color: '#fff', marginTop: 4 },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderRadius: 99,
+    marginTop: 12,
+    marginBottom: 8,
   },
-  statsCard: {
-    flexDirection: 'row',
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    alignItems: 'center',
-  },
-  statItem: {
+  progressBarFill: { height: 6, backgroundColor: '#fff', borderRadius: 99 },
+  progressSub: { fontSize: 13, color: 'rgba(255,255,255,0.75)' },
+  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
+  statCard: {
     flex: 1,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 14,
     alignItems: 'center',
+    borderTopWidth: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  statValue: {
-    color: Colors.white,
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginTop: Spacing.xs,
-  },
-  statLabel: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 12,
-  },
-  statDivider: {
-    width: 1,
-    height: '60%',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-  },
+  statIcon: { fontSize: 20, marginBottom: 6 },
+  statNum: { fontSize: 20, fontWeight: '800', color: '#0f172a' },
+  statLabel: { fontSize: 11, color: '#64748b', fontWeight: '500', marginTop: 2 },
+  section: { marginBottom: 28 },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: Spacing.md,
+    marginBottom: 14,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.text,
-  },
-  seeAll: {
-    color: Colors.primary,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  routineCard: {
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
+  seeAll: { fontSize: 13, fontWeight: '600', color: '#6366f1' },
+  taskCard: {
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    padding: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Spacing.sm,
-    // Shadow
+    marginBottom: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
-  categoryIndicator: {
-    width: 4,
-    height: '100%',
-    borderRadius: 2,
-    marginRight: Spacing.md,
-  },
-  routineInfo: {
-    flex: 1,
-  },
-  routineTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 4,
-  },
-  timeContainer: {
-    flexDirection: 'row',
+  taskDot: { width: 4, height: 40, borderRadius: 2, marginRight: 14 },
+  taskInfo: { flex: 1 },
+  taskTitle: { fontSize: 15, fontWeight: '600', color: '#0f172a' },
+  taskDone: { textDecorationLine: 'line-through', color: '#94a3b8' },
+  taskTime: { fontSize: 12, color: '#94a3b8', marginTop: 3 },
+  taskCheck: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
   },
-  routineTime: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  statusIcon: {
-    marginLeft: Spacing.md,
-  },
-  quickActionContainer: {
-    marginTop: Spacing.xl,
-  },
-  actionGrid: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-    marginTop: Spacing.md,
-  },
-  actionItem: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.lg,
-    padding: Spacing.md,
+  taskCheckMark: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  actionsRow: { flexDirection: 'row', gap: 16, marginTop: 14 },
+  actionBtn: { flex: 1, alignItems: 'center', gap: 8 },
+  actionGrad: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: Colors.border,
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  actionEmoji: {
-    fontSize: 24,
-    marginBottom: Spacing.xs,
-  },
+  actionEmoji: { fontSize: 28 },
   actionLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors.text,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#334155',
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });
