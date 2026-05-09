@@ -88,7 +88,7 @@ export default function VerifyOtpScreen() {
       } else {
         await SecureStore.setItemAsync('userToken', access_token);
       }
-      router.replace('/(tabs)');
+      router.replace('/(tabs)/dashboard');
     } catch (err: any) {
       const msg = err?.response?.data?.message;
       setError(Array.isArray(msg) ? msg[0] : (msg || 'Invalid OTP. Please try again.'));
