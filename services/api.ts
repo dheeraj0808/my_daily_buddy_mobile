@@ -2,7 +2,6 @@ import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 import { getApiBaseUrl } from '@/constants/config';
 import { storage } from '@/utils/storage';
-import { authService } from './authService';
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
@@ -29,7 +28,9 @@ async function refreshAccessToken(): Promise<string | null> {
   if (!refreshToken) return null;
 
   try {
-    const result = await authService.refreshToken(refreshToken);
+    const { data: result } = await axios.post(`${getApiBaseUrl()}/auth/refresh-token`, {
+      refresh_token: refreshToken,
+    });
     const access = result?.data?.access_token;
     const refresh = result?.data?.refresh_token;
     if (access) {
