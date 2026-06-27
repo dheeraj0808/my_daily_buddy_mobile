@@ -1,39 +1,37 @@
 import { router } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import { useEffect, useState } from 'react';
-import { Platform } from 'react-native';
+import { useEffect } from 'react';
+
+import { useAuth } from '@/contexts/AuthContext';
 
 /**
- * Mirrors root layout: if a token exists after startup, land on the main tabs dashboard.
+ * Redirects based on auth state: authenticated users → dashboard, others → landing.
  */
 export function useInitialAuthRedirect() {
-  const [isReady, setIsReady] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        let token: string | null = null;
-        if (Platform.OS === 'web') {
-          token = localStorage.getItem('userToken');
-        } else {
-          token = await SecureStore.getItemAsync('userToken');
-        }
-        setIsAuthenticated(!!token);
-      } catch {
-        setIsAuthenticated(false);
-      } finally {
-        setIsReady(true);
-      }
-    };
-
-    checkAuth();
-  }, []);
+  const { isReady, isAuthenticated, refreshProfile } = useAuth();
 
   useEffect(() => {
     if (!isReady) return;
+
     if (isAuthenticated) {
+      refreshProfile();
       router.replace('/(tabs)/dashboard');
+    } else {
+      router.replace('/(auth)');
+    }
+  }, [isReady, isAuthenticated, refreshProfile]);
+
+  return { isReady, isAuthenticated };
+}
+
+/**
+ * Protects tab routes — redirects unauthenticated users to auth landing.
+ */
+export function useRequireAuth() {
+  const { isReady, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isReady && !isAuthenticated) {
+      router.replace('/(auth)/login');
     }
   }, [isReady, isAuthenticated]);
 

@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import React from 'react';
 
+import TabAuthGate from '@/components/shared/TabAuthGate';
 import { HapticTab } from '@/components/shared/HapticTab';
 import { TAB_SCREENS, type IoniconName } from '@/constants/tabScreens';
 
@@ -20,7 +21,8 @@ function TabIcon({
 
 export default function TabLayout() {
   return (
-    <Tabs
+    <TabAuthGate>
+      <Tabs
       screenOptions={{
         headerShown: false,
         tabBarButton: HapticTab,
@@ -39,7 +41,7 @@ export default function TabLayout() {
           elevation: 10,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10,
           fontWeight: '600',
           marginTop: 2,
         },
@@ -57,6 +59,7 @@ export default function TabLayout() {
           }}
         />
       ))}
-    </Tabs>
+      </Tabs>
+    </TabAuthGate>
   );
 }

@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 
 import { storage } from '@/utils/storage';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   getProfile,
   loadProfileImageUri,
@@ -46,6 +47,7 @@ function formatDate(d: string): string {
 const PHONE_REGEX = /^\+?[1-9]\d{1,14}$/;
 
 export default function ProfileScreen() {
+  const { signOut } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -233,7 +235,7 @@ export default function ProfileScreen() {
         style: 'destructive',
         onPress: async () => {
           try {
-            await storage.clearToken();
+            await signOut();
           } catch {}
           router.replace('/(auth)/login');
         },
