@@ -4,10 +4,11 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
+import { AuthProvider } from '@/contexts/AuthContext';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useInitialAuthRedirect } from '@/hooks/use-initial-auth-redirect';
 
-export default function RootLayout() {
+function RootNavigator() {
   const colorScheme = useColorScheme();
   useInitialAuthRedirect();
 
@@ -20,5 +21,13 @@ export default function RootLayout() {
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootNavigator />
+    </AuthProvider>
   );
 }

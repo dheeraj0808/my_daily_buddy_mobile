@@ -11,15 +11,17 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
 import { LinearGradient } from 'expo-linear-gradient';
 import { authService } from '../../services/authService';
+import { storage } from '@/utils/storage';
+import { useAuth } from '@/contexts/AuthContext';
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 30;
 
 export default function VerifyOtpScreen() {
   const { userId, email } = useLocalSearchParams<{ userId: string; email: string }>();
+  const { setAuthenticated, refreshProfile } = useAuth();
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [focusedIndex, setFocusedIndex] = useState(0);
@@ -82,12 +84,14 @@ export default function VerifyOtpScreen() {
     setLoading(true);
     try {
       const result = await authService.verifyOtp(userId, fullOtp);
-      const { access_token } = result?.data ?? {};
-      if (Platform.OS === 'web') {
-        localStorage.setItem('userToken', access_token);
-      } else {
-        await SecureStore.setItemAsync('userToken', access_token);
+      const { access_token, refresh_token } = result?.data ?? {};
+      if (access_token && refresh_token) {
+        await storage.setTokens(access_token, refresh_token);
+      } else if (access_token) {
+        await storage.setToken(access_token);
       }
+      setAuthenticated(true);
+      await refreshProfile();
       router.replace('/(tabs)/dashboard');
     } catch (err: any) {
       const msg = err?.response?.data?.message;

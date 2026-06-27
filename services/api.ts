@@ -1,12 +1,8 @@
-import axios from 'axios';
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 import { getApiBaseUrl } from '@/constants/config';
 import { storage } from '@/utils/storage';
-
-/**
- * Base URL: see `constants/config.ts` (`EXPO_PUBLIC_API_URL` or `expo.extra.apiUrl`).
- * Device testing: point EXPO_PUBLIC_API_URL at your machine (e.g. http://192.168.x.x:5001/api).
- */
+import { authService } from './authService';
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
@@ -15,7 +11,6 @@ const api = axios.create({
   },
 });
 
-// Request interceptor — attach JWT Bearer token from secure storage
 api.interceptors.request.use(
   async (config) => {
     const token = await storage.getToken();
@@ -27,10 +22,51 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor for easy debugging
+let refreshPromise: Promise<string | null> | null = null;
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = await storage.getRefreshToken();
+  if (!refreshToken) return null;
+
+  try {
+    const result = await authService.refreshToken(refreshToken);
+    const access = result?.data?.access_token;
+    const refresh = result?.data?.refresh_token;
+    if (access) {
+      if (refresh) {
+        await storage.setTokens(access, refresh);
+      } else {
+        await storage.setToken(access);
+      }
+      return access;
+    }
+  } catch {
+    await storage.clearToken();
+  }
+  return null;
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error: AxiosError) => {
+    const original = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
+
+    if (error.response?.status === 401 && original && !original._retry) {
+      original._retry = true;
+
+      if (!refreshPromise) {
+        refreshPromise = refreshAccessToken().finally(() => {
+          refreshPromise = null;
+        });
+      }
+
+      const newToken = await refreshPromise;
+      if (newToken) {
+        original.headers.Authorization = `Bearer ${newToken}`;
+        return api(original);
+      }
+    }
+
     console.error('API Error:', error.response?.data || error.message);
     return Promise.reject(error);
   }
