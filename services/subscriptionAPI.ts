@@ -22,13 +22,11 @@ export interface UserSubscription {
 }
 
 export async function getMySubscription(): Promise<UserSubscription | null> {
-  try {
-    const response = await api.get<{ data: UserSubscription }>('/subscriptions/me');
-    return response.data.data;
-  } catch (error: any) {
-    if (error?.response?.status === 404) return null;
-    throw error;
-  }
+  const response = await api.get<{ data: UserSubscription }>('/subscriptions/me', {
+    validateStatus: (status) => status === 200 || status === 404,
+  });
+  if (response.status === 404) return null;
+  return response.data.data;
 }
 
 export async function getAllPlans(): Promise<Plan[]> {

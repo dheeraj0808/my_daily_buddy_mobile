@@ -1,8 +1,8 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
 import { getApiBaseUrl, logApiUrlResolution } from '@/constants/config';
-import { storage } from '@/utils/storage';
 import { emitSessionExpired } from '@/utils/sessionEvents';
+import { storage } from '@/utils/storage';
 
 const REQUEST_TIMEOUT_MS = 45_000;
 const AUTH_TIMEOUT_MS = 60_000;
@@ -89,8 +89,8 @@ api.interceptors.response.use(
       emitSessionExpired();
     }
 
-    if (__DEV__) {
-      console.error('[API] Error:', error.response?.data || error.message);
+    if (__DEV__ && error.response?.status !== 404) {
+      console.warn('[API] Error:', error.response?.data || error.message);
     }
     return Promise.reject(error);
   }
