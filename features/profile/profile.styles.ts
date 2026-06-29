@@ -1,5 +1,5 @@
-import { StyleSheet } from 'react-native';
 import { BorderRadius, Colors, Spacing } from '@/constants/Colors';
+import { StyleSheet } from 'react-native';
 
 const HEADER_GRADIENT_START = '#8b5cf6';
 const HEADER_GRADIENT_END = '#6366f1';
@@ -56,6 +56,9 @@ export default StyleSheet.create({
     paddingTop: Spacing.lg,
     paddingBottom: Spacing.xl,
     paddingHorizontal: Spacing.lg,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    marginBottom: Spacing.md,
   },
   avatarWrapper: {
     position: 'relative',
@@ -149,7 +152,6 @@ export default StyleSheet.create({
 
   // ── Section wrapper ───────────────────────────────────────────────────────
   sectionWrapper: {
-    marginHorizontal: Spacing.md,
     marginTop: Spacing.lg,
   },
   sectionTitle: {
@@ -532,7 +534,6 @@ export default StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: Spacing.sm,
-    marginHorizontal: Spacing.md,
     marginTop: Spacing.lg,
     paddingVertical: 16,
     backgroundColor: Colors.card,

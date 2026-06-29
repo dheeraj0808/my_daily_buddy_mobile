@@ -70,7 +70,12 @@ export default function RegisterScreen() {
         params: { userId, email: email.trim().toLowerCase(), source: 'register' },
       });
     } catch (err: unknown) {
-      setErrors({ general: getErrorMessage(err, 'Registration failed. Please try again.') });
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 409) {
+        setErrors({ general: 'An account with this email already exists. Please log in instead.' });
+      } else {
+        setErrors({ general: getErrorMessage(err, 'Registration failed. Please try again.') });
+      }
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import TabAuthGate from '@/components/shared/TabAuthGate';
 import { HapticTab } from '@/components/shared/HapticTab';
@@ -22,6 +22,9 @@ function TabIcon({
 }
 
 export default function TabLayout() {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 56 + insets.bottom;
+
   return (
     <TabAuthGate>
       <Tabs
@@ -33,9 +36,9 @@ export default function TabLayout() {
           tabBarStyle: {
             backgroundColor: palette.surface,
             borderTopWidth: 0,
-            height: Platform.OS === 'ios' ? 84 : 72,
+            height: tabBarHeight,
             paddingTop: spacing.sm,
-            paddingBottom: Platform.OS === 'ios' ? spacing.lg : spacing.sm,
+            paddingBottom: Math.max(insets.bottom, spacing.sm),
             shadowColor: palette.text,
             shadowOffset: { width: 0, height: -4 },
             shadowOpacity: 0.06,

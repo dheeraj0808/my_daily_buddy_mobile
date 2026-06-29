@@ -20,10 +20,9 @@ type HabitsState = ReturnType<typeof useHabits>;
 interface Props {
   state: HabitsState;
   onAddReady?: (openAdd: () => void) => void;
-  onSummaryChange?: (summary: { subtitle: string }) => void;
 }
 
-export default function HabitsPanel({ state, onAddReady, onSummaryChange }: Props) {
+export default function HabitsPanel({ state, onAddReady }: Props) {
   const { habits, error, reload, toggleCheckIn, addHabit, removeHabit } = state;
   const [modalVisible, setModalVisible] = useState(false);
   const [name, setName] = useState('');
@@ -35,12 +34,6 @@ export default function HabitsPanel({ state, onAddReady, onSummaryChange }: Prop
   useEffect(() => {
     onAddReady?.(() => setModalVisible(true));
   }, [onAddReady]);
-
-  useEffect(() => {
-    onSummaryChange?.({
-      subtitle: `${completedCount} of ${habits.length} habits done today`,
-    });
-  }, [completedCount, habits.length, onSummaryChange]);
 
   const handleCreate = async () => {
     if (!name.trim()) return;
@@ -164,7 +157,6 @@ const styles = StyleSheet.create({
   weekRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
   dayCircle: {
@@ -176,7 +168,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dayCircleActive: { backgroundColor: '#D1FAE5' },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
+  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   statCard: {
     flex: 1,
     backgroundColor: palette.surface,
@@ -188,7 +180,6 @@ const styles = StyleSheet.create({
   habitCard: {
     backgroundColor: palette.surface,
     borderRadius: radius.lg,
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     padding: spacing.md,
     flexDirection: 'row',

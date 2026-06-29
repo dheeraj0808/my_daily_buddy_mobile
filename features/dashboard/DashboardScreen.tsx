@@ -15,16 +15,16 @@ import Screen from '@/components/ui/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboard } from '@/hooks/use-dashboard';
 import {
-  createTask,
-  deleteTask,
-  PRIORITY_COLORS,
-  toggleTask,
-  type Task,
-  updateTask,
+    createTask,
+    deleteTask,
+    PRIORITY_COLORS,
+    toggleTask,
+    updateTask,
+    type Task,
 } from '@/services/taskAPI';
 import { gradients, palette, radius, shadows, spacing } from '@/theme';
-import { formatTime } from '@/utils/timezone';
 import { getErrorMessage } from '@/utils/errors';
+import { formatTime } from '@/utils/timezone';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -142,46 +142,50 @@ export default function DashboardScreen() {
   const name = profile ? displayName(firstName, lastName, email) : 'there';
 
   return (
-    <Screen refreshing={refreshing} onRefresh={refresh} contentStyle={styles.scroll}>
+    <Screen
+      refreshing={refreshing}
+      onRefresh={refresh}
+      header={
+        <LinearGradient colors={[...gradients.primaryDeep]} style={styles.hero}>
+          <View style={styles.heroTop}>
+            <View style={styles.heroText}>
+              <AppText variant="caption" color={palette.onPrimaryMuted}>
+                {getGreeting()}
+              </AppText>
+              <AppText variant="h1" color={palette.onPrimary}>
+                {name}
+              </AppText>
+              <AppText variant="caption" color={palette.onPrimaryMuted}>
+                {getDate()}
+              </AppText>
+            </View>
+            <TouchableOpacity style={styles.avatar} onPress={() => router.push('/(tabs)/profile')}>
+              <AppText variant="title" color={palette.primaryLight}>
+                {profile ? initials(firstName, lastName, email) : '?'}
+              </AppText>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.progressInner}>
+            <View style={styles.progressRow}>
+              <AppText variant="label" color={palette.onPrimaryMuted}>
+                Today&apos;s progress
+              </AppText>
+              <AppText variant="h1" color={palette.onPrimary}>
+                {pct}%
+              </AppText>
+            </View>
+            <View style={styles.progressBarBg}>
+              <View style={[styles.progressBarFill, { width: `${Math.max(pct, 2)}%` }]} />
+            </View>
+            <AppText variant="caption" color={palette.onPrimaryMuted}>
+              {done} of {total} tasks completed
+            </AppText>
+          </View>
+        </LinearGradient>
+      }
+    >
       {error ? <ErrorBanner message={error} onRetry={reload} /> : null}
-
-      <LinearGradient colors={[...gradients.primaryDeep]} style={styles.hero}>
-        <View style={styles.heroTop}>
-          <View style={styles.heroText}>
-            <AppText variant="caption" color={palette.onPrimaryMuted}>
-              {getGreeting()}
-            </AppText>
-            <AppText variant="h1" color={palette.onPrimary}>
-              {name}
-            </AppText>
-            <AppText variant="caption" color={palette.onPrimaryMuted}>
-              {getDate()}
-            </AppText>
-          </View>
-          <TouchableOpacity style={styles.avatar} onPress={() => router.push('/(tabs)/profile')}>
-            <AppText variant="title" color={palette.primaryLight}>
-              {profile ? initials(firstName, lastName, email) : '?'}
-            </AppText>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.progressInner}>
-          <View style={styles.progressRow}>
-            <AppText variant="label" color={palette.onPrimaryMuted}>
-              Today&apos;s progress
-            </AppText>
-            <AppText variant="h1" color={palette.onPrimary}>
-              {pct}%
-            </AppText>
-          </View>
-          <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${Math.max(pct, 2)}%` }]} />
-          </View>
-          <AppText variant="caption" color={palette.onPrimaryMuted}>
-            {done} of {total} tasks completed
-          </AppText>
-        </View>
-      </LinearGradient>
 
       <View style={styles.statsRow}>
         <Card style={styles.statCard}>
@@ -290,10 +294,9 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingTop: 0, paddingHorizontal: 0, paddingBottom: spacing.xl },
   hero: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.xl,
     borderBottomLeftRadius: radius.xxl,
     borderBottomRightRadius: radius.xxl,
@@ -331,7 +334,6 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
   },
   statCard: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: spacing.md },
@@ -342,7 +344,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emptyCard: { marginHorizontal: spacing.lg, marginBottom: spacing.lg, alignItems: 'center' },
+  emptyCard: { marginBottom: spacing.lg, alignItems: 'center' },
   emptyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -359,7 +361,6 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     ...shadows.sm,
   },
@@ -371,7 +372,6 @@ const styles = StyleSheet.create({
   actionsRow: {
     flexDirection: 'row',
     gap: spacing.md,
-    paddingHorizontal: spacing.lg,
     marginBottom: spacing.xl,
   },
   actionBtn: { flex: 1, alignItems: 'center', gap: spacing.sm },

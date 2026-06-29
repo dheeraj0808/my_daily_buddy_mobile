@@ -22,10 +22,9 @@ type GoalsState = ReturnType<typeof useGoals>;
 interface Props {
   state: GoalsState;
   onAddReady?: (openAdd: () => void) => void;
-  onSummaryChange?: (summary: { subtitle: string }) => void;
 }
 
-export default function GoalsPanel({ state, onAddReady, onSummaryChange }: Props) {
+export default function GoalsPanel({ state, onAddReady }: Props) {
   const { goals, stats, error, reload, addGoal, logProgress, removeGoal, goalProgressPercent } = state;
 
   const [createModal, setCreateModal] = useState(false);
@@ -39,12 +38,6 @@ export default function GoalsPanel({ state, onAddReady, onSummaryChange }: Props
   useEffect(() => {
     onAddReady?.(() => setCreateModal(true));
   }, [onAddReady]);
-
-  useEffect(() => {
-    onSummaryChange?.({
-      subtitle: `${stats?.total ?? goals.length} goals · ${Math.round(stats?.completionRate ?? 0)}% completion`,
-    });
-  }, [goals.length, onSummaryChange, stats]);
 
   const handleCreate = async () => {
     if (!title.trim()) return;
@@ -187,7 +180,7 @@ export default function GoalsPanel({ state, onAddReady, onSummaryChange }: Props
 }
 
 const styles = StyleSheet.create({
-  statsRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.lg },
+  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
   statCard: {
     flex: 1,
     backgroundColor: palette.surface,
@@ -199,7 +192,6 @@ const styles = StyleSheet.create({
   goalCard: {
     backgroundColor: palette.surface,
     borderRadius: radius.lg,
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     padding: spacing.md,
     ...shadows.sm,

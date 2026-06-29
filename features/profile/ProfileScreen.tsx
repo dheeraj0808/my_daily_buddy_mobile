@@ -4,35 +4,33 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  Modal,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    Modal,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
-import { storage } from '@/utils/storage';
+import Screen from '@/components/ui/Screen';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  getProfile,
-  loadProfileImageUri,
-  saveProfileImageUri,
-  updateProfile,
-  uploadProfileImage,
-} from '@/services/profileAPI';
-import {
-  changePlan,
-  getAllPlans,
-  getMySubscription,
-} from '@/services/subscriptionAPI';
 import type { UpdateProfilePayload, UserProfile } from '@/services/profileAPI';
+import {
+    getProfile,
+    loadProfileImageUri,
+    saveProfileImageUri,
+    updateProfile,
+    uploadProfileImage,
+} from '@/services/profileAPI';
 import type { Plan, UserSubscription } from '@/services/subscriptionAPI';
+import {
+    changePlan,
+    getAllPlans,
+    getMySubscription,
+} from '@/services/subscriptionAPI';
 import { getErrorMessage } from '@/utils/errors';
 import styles from './profile.styles';
 
@@ -246,18 +244,18 @@ export default function ProfileScreen() {
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <Screen scroll={false}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6366f1" />
           <Text style={styles.loadingText}>Loading profile…</Text>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   if (error) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <Screen scroll={false}>
         <View style={styles.errorContainer}>
           <Ionicons name="cloud-offline-outline" size={48} color="#94a3b8" />
           <Text style={styles.errorText}>{error}</Text>
@@ -265,70 +263,62 @@ export default function ProfileScreen() {
             <Text style={styles.retryBtnText}>Try Again</Text>
           </TouchableOpacity>
         </View>
-      </SafeAreaView>
+      </Screen>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={() => loadData(true)}
-            tintColor="#6366f1"
-            colors={['#6366f1']}
-          />
+    <>
+      <Screen
+        refreshing={refreshing}
+        onRefresh={() => loadData(true)}
+        header={
+          <LinearGradient colors={['#8b5cf6', '#6366f1']} style={styles.header}>
+            <TouchableOpacity
+              style={styles.avatarWrapper}
+              onPress={handlePickImage}
+              activeOpacity={0.85}
+            >
+              {avatarUri ? (
+                <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+              ) : (
+                <View style={styles.avatarInitialsCircle}>
+                  <Text style={styles.avatarInitialsText}>{initials}</Text>
+                </View>
+              )}
+              {uploadingImage ? (
+                <View style={styles.uploadingOverlay}>
+                  <ActivityIndicator size="small" color="#fff" />
+                </View>
+              ) : (
+                <View style={styles.cameraOverlay}>
+                  <Ionicons name="camera" size={14} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <Text style={styles.headerName}>{displayName}</Text>
+            <Text style={styles.headerEmail}>{profile?.email}</Text>
+
+            {profile?.isVerified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="checkmark-circle" size={13} color="#86efac" />
+                <Text style={styles.verifiedBadgeText}>Verified</Text>
+              </View>
+            )}
+
+            {!isEditing && (
+              <TouchableOpacity
+                style={styles.editProfileBtn}
+                onPress={() => setIsEditing(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.editProfileBtnText}>✏️ Edit Profile</Text>
+              </TouchableOpacity>
+            )}
+          </LinearGradient>
         }
       >
-        {/* ── Header ─────────────────────────────────────────────────────── */}
-        <LinearGradient colors={['#8b5cf6', '#6366f1']} style={styles.header}>
-          <TouchableOpacity
-            style={styles.avatarWrapper}
-            onPress={handlePickImage}
-            activeOpacity={0.85}
-          >
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
-            ) : (
-              <View style={styles.avatarInitialsCircle}>
-                <Text style={styles.avatarInitialsText}>{initials}</Text>
-              </View>
-            )}
-            {uploadingImage ? (
-              <View style={styles.uploadingOverlay}>
-                <ActivityIndicator size="small" color="#fff" />
-              </View>
-            ) : (
-              <View style={styles.cameraOverlay}>
-                <Ionicons name="camera" size={14} color="#fff" />
-              </View>
-            )}
-          </TouchableOpacity>
-
-          <Text style={styles.headerName}>{displayName}</Text>
-          <Text style={styles.headerEmail}>{profile?.email}</Text>
-
-          {profile?.isVerified && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={13} color="#86efac" />
-              <Text style={styles.verifiedBadgeText}>Verified</Text>
-            </View>
-          )}
-
-          {!isEditing && (
-            <TouchableOpacity
-              style={styles.editProfileBtn}
-              onPress={() => setIsEditing(true)}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.editProfileBtnText}>✏️ Edit Profile</Text>
-            </TouchableOpacity>
-          )}
-        </LinearGradient>
-
         {/* ── Edit Profile Form ───────────────────────────────────────────── */}
         {isEditing && (
           <View style={styles.sectionWrapper}>
@@ -521,8 +511,8 @@ export default function ProfileScreen() {
           <Text style={styles.logoutBtnText}>Logout</Text>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>Daily Life Assistant v1.0.0</Text>
-      </ScrollView>
+        <Text style={styles.versionText}>My Daily Buddy v1.0.0</Text>
+      </Screen>
 
       {/* ── Plan Change Modal ──────────────────────────────────────────────── */}
       <Modal
@@ -632,6 +622,6 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </>
   );
 }

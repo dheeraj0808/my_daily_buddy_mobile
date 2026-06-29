@@ -1,10 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useState } from 'react';
 import {
-  Alert,
-  StyleSheet,
-  TouchableOpacity,
-  View,
+    Alert,
+    StyleSheet,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import ErrorBanner from '@/components/shared/ErrorBanner';
@@ -19,8 +19,8 @@ import { useHealth } from '@/hooks/use-health';
 import { logFood, searchFood } from '@/services/foodAPI';
 import { logBodyMetric } from '@/services/healthAPI';
 import { palette, radius, shadows, spacing } from '@/theme';
-import { mlToGlasses } from '@/utils/timezone';
 import { getErrorMessage } from '@/utils/errors';
+import { mlToGlasses } from '@/utils/timezone';
 
 const HEALTH_TIPS = [
   'Walk 10 minutes after every meal for better digestion.',
@@ -97,32 +97,36 @@ export default function HealthScreen() {
 
   return (
     <>
-      <Screen refreshing={refreshing} onRefresh={refresh} refreshTint={palette.error} contentStyle={styles.scroll}>
-        {error ? <ErrorBanner message={error} onRetry={reload} /> : null}
-
-        <ScreenHeader
-          accent="health"
-          title="Health"
-          subtitle="Track nutrition, hydration & body metrics"
-          style={styles.header}
-        >
-          <Card padded style={styles.hrCard}>
-            <View>
-              <AppText variant="caption" color={palette.textSecondary}>
-                Heart rate
-              </AppText>
-              <View style={styles.hrRow}>
-                <AppText variant="display" style={styles.hrValue}>
-                  —
+      <Screen
+        refreshing={refreshing}
+        onRefresh={refresh}
+        refreshTint={palette.error}
+        header={
+          <ScreenHeader
+            accent="health"
+            title="Health"
+            subtitle="Track nutrition, hydration & body metrics"
+          >
+            <Card padded style={styles.hrCard}>
+              <View>
+                <AppText variant="caption" color={palette.textSecondary}>
+                  Heart rate
+                </AppText>
+                <View style={styles.hrRow}>
+                  <AppText variant="display" style={styles.hrValue}>
+                    —
+                  </AppText>
+                </View>
+                <AppText variant="caption" color={palette.textMuted}>
+                  Connect a wearable to sync live data
                 </AppText>
               </View>
-              <AppText variant="caption" color={palette.textMuted}>
-                Connect a wearable to sync live data
-              </AppText>
-            </View>
-            <Ionicons name="heart-outline" size={40} color={palette.error} />
-          </Card>
-        </ScreenHeader>
+              <Ionicons name="heart-outline" size={40} color={palette.error} />
+            </Card>
+          </ScreenHeader>
+        }
+      >
+        {error ? <ErrorBanner message={error} onRetry={reload} /> : null}
 
         {health?.latest ? (
           <TouchableOpacity style={styles.bmiCard} onPress={() => setMetricModal(true)}>
@@ -218,27 +222,24 @@ export default function HealthScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: spacing.xl },
-  header: { marginHorizontal: -spacing.lg, marginTop: -spacing.md },
   hrCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm },
   hrRow: { flexDirection: 'row', alignItems: 'flex-end' },
   hrValue: { fontSize: 36 },
   bmiCard: {
     backgroundColor: palette.surface,
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     borderRadius: radius.lg,
     padding: spacing.md,
     ...shadows.sm,
   },
-  metricsRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
+  metricsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.md },
   metricCard: {
     flex: 1,
     gap: 4,
   },
   metricBarBg: { height: 5, backgroundColor: palette.surfaceMuted, borderRadius: radius.full, marginVertical: 6 },
   metricBarFill: { height: 5, borderRadius: radius.full },
-  waterCard: { marginHorizontal: spacing.lg, marginBottom: spacing.lg, gap: spacing.md },
+  waterCard: { marginBottom: spacing.lg, gap: spacing.md },
   waterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   waterAddBtn: { backgroundColor: '#EFF6FF', borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 6 },
   glassesRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 },
@@ -249,7 +250,6 @@ const styles = StyleSheet.create({
   tipCard: {
     backgroundColor: palette.surface,
     borderRadius: radius.lg,
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     padding: spacing.md,
     borderLeftWidth: 4,

@@ -78,7 +78,6 @@ export function CheckCircle({ checked, color = palette.success }: { checked: boo
 const styles = StyleSheet.create({
   scroll: { maxHeight: 52 },
   row: {
-    paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     gap: spacing.sm,
     flexDirection: 'row',
@@ -95,7 +94,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
   check: {

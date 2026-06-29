@@ -76,8 +76,11 @@ export default function ScreenHeader({
 const styles = StyleSheet.create({
   wrap: {
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
+    paddingTop: spacing.lg,
     paddingBottom: spacing.lg,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+    marginBottom: spacing.md,
   },
   top: {
     flexDirection: 'row',

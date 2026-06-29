@@ -34,7 +34,7 @@ export default function VerifyOtpScreen() {
   const [error, setError] = useState('');
   const [timer, setTimer] = useState(RESEND_SECONDS);
 
-  const inputRefs = useRef<Array<TextInput | null>>(Array(OTP_LENGTH).fill(null));
+  const inputRefs = useRef<(TextInput | null)[]>(Array(OTP_LENGTH).fill(null));
 
   useEffect(() => {
     const t = setTimeout(() => inputRefs.current[0]?.focus(), 200);

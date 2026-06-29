@@ -1,13 +1,13 @@
 import React from 'react';
 import {
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   View,
   type RefreshControlProps,
   type ViewStyle,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { palette, spacing } from '@/theme';
 
@@ -18,7 +18,10 @@ interface Props {
   onRefresh?: () => void;
   refreshTint?: string;
   contentStyle?: ViewStyle;
+  /** Full-bleed header (gradient) — rendered above scroll, respects top safe area */
   header?: React.ReactNode;
+  /** Default true — horizontal padding for scroll body */
+  padded?: boolean;
 }
 
 export default function Screen({
@@ -29,37 +32,48 @@ export default function Screen({
   refreshTint = palette.primaryLight,
   contentStyle,
   header,
+  padded = true,
 }: Props) {
+  const insets = useSafeAreaInsets();
+
   const refreshControl =
     onRefresh != null ? (
       <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor={refreshTint} />
     ) : undefined;
 
+  const bodyPadding = padded ? styles.padded : undefined;
+  const bottomPad = Math.max(insets.bottom, spacing.sm) + spacing.lg;
+
   if (!scroll) {
     return (
-      <SafeAreaView style={styles.safe}>
+      <View style={[styles.root, { paddingTop: insets.top }]}>
         {header}
-        <View style={[styles.content, contentStyle]}>{children}</View>
-      </SafeAreaView>
+        <View style={[styles.content, bodyPadding, contentStyle, { paddingBottom: bottomPad }]}>
+          {children}
+        </View>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safe}>
-      {header}
+    <View style={styles.root}>
+      {header ? <View style={{ paddingTop: insets.top }}>{header}</View> : <View style={{ height: insets.top }} />}
       <ScrollView
-        contentContainerStyle={[styles.scroll, contentStyle]}
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scroll, bodyPadding, { paddingBottom: bottomPad }, contentStyle]}
         showsVerticalScrollIndicator={false}
         refreshControl={refreshControl as RefreshControlProps | undefined}
       >
         {children}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: palette.background },
+  root: { flex: 1, backgroundColor: palette.background },
+  scrollView: { flex: 1 },
   content: { flex: 1 },
-  scroll: { paddingBottom: spacing.xl },
+  scroll: { flexGrow: 1 },
+  padded: { paddingHorizontal: spacing.lg },
 });
