@@ -12,7 +12,7 @@ import {
   type GoalStats,
   type GoalType,
 } from '@/services/goalAPI';
-import { getErrorMessage } from '@/utils/errors';
+import { getErrorMessage, isAuthError } from '@/utils/errors';
 
 export function useGoals() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -31,7 +31,9 @@ export function useGoals() {
       setGoals(goalsRes.data);
       setStats(statsRes);
     } catch (err) {
-      setError(getErrorMessage(err));
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

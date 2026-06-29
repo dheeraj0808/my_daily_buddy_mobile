@@ -39,6 +39,10 @@ export default function LoginScreen() {
     try {
       const result = await authService.login(trimmed);
       const userId = result?.data?.userId;
+      if (!userId) {
+        setError('Could not start login. Please try again or sign up first.');
+        return;
+      }
       router.push({
         pathname: '/(auth)/verify-otp',
         params: { userId, email: trimmed, source: 'login' },
@@ -48,6 +52,8 @@ export default function LoginScreen() {
       if (status === 404) {
         setNotRegistered(true);
         setError('No account found. Please create one first.');
+      } else if (status === 403) {
+        setError('This account cannot sign in here. Use the admin portal.');
       } else {
         setError(getErrorMessage(err, 'Failed to send OTP. Please try again.'));
       }

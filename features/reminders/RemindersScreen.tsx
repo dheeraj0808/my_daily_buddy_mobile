@@ -34,7 +34,7 @@ export default function RemindersScreen() {
   });
 
   const activeCount = reminders.filter((r) => r.is_active).length;
-  const doneCount = reminders.length - activeCount;
+  const inactiveCount = reminders.length - activeCount;
 
   const handleCreate = async () => {
     if (!title.trim()) return;
@@ -62,12 +62,12 @@ export default function RemindersScreen() {
         <ScreenHeader
           accent="warning"
           title="Reminders"
-          subtitle={`${activeCount} active · ${doneCount} dismissed`}
+          subtitle={`${activeCount} active · ${inactiveCount} inactive`}
           onAdd={() => setModalVisible(true)}
           addLabel="+ Add"
           stats={[
             { value: reminders.length, label: 'Total' },
-            { value: doneCount, label: 'Dismissed' },
+            { value: inactiveCount, label: 'Inactive' },
             { value: activeCount, label: 'Active' },
           ]}
           style={styles.header}
@@ -86,11 +86,18 @@ export default function RemindersScreen() {
               <TouchableOpacity
                 key={r.id}
                 style={[styles.card, dismissed && styles.cardDone]}
-                onPress={() => toggleActive(r)}
+                onPress={() =>
+                  toggleActive(r).catch((err) => Alert.alert('Error', getErrorMessage(err)))
+                }
                 onLongPress={() =>
                   Alert.alert('Delete reminder', `Remove "${r.title}"?`, [
                     { text: 'Cancel', style: 'cancel' },
-                    { text: 'Delete', style: 'destructive', onPress: () => removeReminder(r.id) },
+                    {
+                      text: 'Delete',
+                      style: 'destructive',
+                      onPress: () =>
+                        removeReminder(r.id).catch((err) => Alert.alert('Error', getErrorMessage(err))),
+                    },
                   ])
                 }
                 activeOpacity={0.85}

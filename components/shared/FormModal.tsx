@@ -32,14 +32,19 @@ export default function FormModal({
   loading,
   children,
 }: Props) {
+  const handleClose = () => {
+    if (loading) return;
+    onClose();
+  };
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose}>
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
+      <Pressable style={styles.backdrop} onPress={handleClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
           <View style={styles.handle} />
           <View style={styles.header}>
             <AppText variant="h2">{title}</AppText>
-            <TouchableOpacity onPress={onClose} hitSlop={12}>
+            <TouchableOpacity onPress={handleClose} hitSlop={12} disabled={loading}>
               <AppText variant="h2" color={palette.textMuted}>
                 ×
               </AppText>

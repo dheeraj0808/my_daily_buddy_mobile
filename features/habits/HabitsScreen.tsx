@@ -110,20 +110,28 @@ function HabitRow({
   onDelete: (id: string) => void;
 }) {
   const color = habit.color ?? palette.primaryLight;
-  const target = habit.target_count || 21;
-  const progress = habit.streak.totalCompletions;
-  const pct = Math.min(100, Math.round((progress / target) * 100));
+  const pct = Math.min(100, Math.round(habit.streak.completionRate));
+
+  const handleToggle = () => {
+    onToggle(habit).catch((err) => Alert.alert('Error', getErrorMessage(err)));
+  };
+
+  const handleDelete = () => {
+    Alert.alert('Delete habit', `Remove "${habit.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => onDelete(habit.id).catch((err) => Alert.alert('Error', getErrorMessage(err))),
+      },
+    ]);
+  };
 
   return (
     <TouchableOpacity
       style={styles.habitCard}
-      onPress={() => onToggle(habit)}
-      onLongPress={() =>
-        Alert.alert('Delete habit', `Remove "${habit.name}"?`, [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: () => onDelete(habit.id) },
-        ])
-      }
+      onPress={handleToggle}
+      onLongPress={handleDelete}
       activeOpacity={0.85}
     >
       <View style={[styles.habitIcon, { backgroundColor: color + '18' }]}>
@@ -145,7 +153,7 @@ function HabitRow({
           <View style={[styles.progressFill, { width: `${pct}%`, backgroundColor: color }]} />
         </View>
         <AppText variant="caption">
-          {progress}/{target} days · {pct}%
+          {habit.streak.currentStreak} day streak · {pct}% completion
         </AppText>
       </View>
       <CheckCircle checked={habit.completedToday} color={color} />

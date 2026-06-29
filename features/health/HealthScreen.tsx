@@ -22,7 +22,6 @@ import { palette, radius, shadows, spacing } from '@/theme';
 import { mlToGlasses } from '@/utils/timezone';
 import { getErrorMessage } from '@/utils/errors';
 
-const STEPS_GOAL = 10000;
 const HEALTH_TIPS = [
   'Walk 10 minutes after every meal for better digestion.',
   'Sleep before 11 PM for improved recovery.',
@@ -40,10 +39,6 @@ export default function HealthScreen() {
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const steps = 6432;
-  const heartRate = 72;
-  const stepsPct = Math.min(Math.round((steps / STEPS_GOAL) * 100), 100);
 
   const waterGlasses = water ? mlToGlasses(water.totalMl) : 0;
   const waterGoalGlasses = water ? Math.max(1, mlToGlasses(water.goalMl)) : 8;
@@ -118,15 +113,14 @@ export default function HealthScreen() {
               </AppText>
               <View style={styles.hrRow}>
                 <AppText variant="display" style={styles.hrValue}>
-                  {heartRate}
+                  —
                 </AppText>
-                <AppText variant="caption"> bpm</AppText>
               </View>
               <AppText variant="caption" color={palette.textMuted}>
                 Connect a wearable to sync live data
               </AppText>
             </View>
-            <Ionicons name="heart" size={40} color={palette.error} />
+            <Ionicons name="heart-outline" size={40} color={palette.error} />
           </Card>
         </ScreenHeader>
 
@@ -149,10 +143,10 @@ export default function HealthScreen() {
         <View style={styles.metricsRow}>
           <Card style={styles.metricCard}>
             <Ionicons name="footsteps-outline" size={22} color={palette.primaryLight} />
-            <AppText variant="h2">{steps.toLocaleString()}</AppText>
+            <AppText variant="h2">—</AppText>
             <AppText variant="caption">Steps</AppText>
             <View style={styles.metricBarBg}>
-              <View style={[styles.metricBarFill, { width: `${stepsPct}%`, backgroundColor: palette.primaryLight }]} />
+              <View style={[styles.metricBarFill, { width: '0%', backgroundColor: palette.primaryLight }]} />
             </View>
             <AppText variant="caption" color={palette.textMuted}>Wearable sync coming soon</AppText>
           </Card>
@@ -176,7 +170,7 @@ export default function HealthScreen() {
                 {waterGlasses} of {waterGoalGlasses} glasses · {waterPct}%
               </AppText>
             </View>
-            <TouchableOpacity style={styles.waterAddBtn} onPress={addGlass}>
+            <TouchableOpacity style={styles.waterAddBtn} onPress={() => addGlass().catch((err) => Alert.alert('Error', getErrorMessage(err)))}>
               <AppText variant="label" color={palette.info}>+ Glass</AppText>
             </TouchableOpacity>
           </View>
@@ -184,7 +178,9 @@ export default function HealthScreen() {
             {Array.from({ length: waterGoalGlasses }).map((_, i) => (
               <TouchableOpacity
                 key={i}
-                onPress={() => setGlasses(i + 1)}
+                onPress={() =>
+                  setGlasses(i + 1).catch((err) => Alert.alert('Error', getErrorMessage(err)))
+                }
                 style={[styles.glass, i < waterGlasses && styles.glassFull]}
               >
                 <Ionicons

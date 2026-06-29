@@ -229,25 +229,26 @@ export default function DashboardScreen() {
         </Card>
       ) : (
         visibleTasks.map((task) => (
-          <TouchableOpacity
-            key={task.id}
-            style={styles.taskCard}
-            onLongPress={() => openEdit(task)}
-            onPress={() => handleToggle(task)}
-            activeOpacity={0.85}
-          >
-            <View style={[styles.taskDot, { backgroundColor: PRIORITY_COLORS[task.priority] }]} />
-            <View style={styles.taskInfo}>
-              <AppText variant="title" style={task.is_completed ? styles.taskDone : undefined}>
-                {task.title}
-              </AppText>
-              {task.due_date ? <AppText variant="caption">{formatTime(task.due_date)}</AppText> : null}
-            </View>
+          <View key={task.id} style={styles.taskCard}>
+            <TouchableOpacity
+              style={styles.taskMain}
+              onLongPress={() => openEdit(task)}
+              onPress={() => handleToggle(task)}
+              activeOpacity={0.85}
+            >
+              <View style={[styles.taskDot, { backgroundColor: PRIORITY_COLORS[task.priority] }]} />
+              <View style={styles.taskInfo}>
+                <AppText variant="title" style={task.is_completed ? styles.taskDone : undefined}>
+                  {task.title}
+                </AppText>
+                {task.due_date ? <AppText variant="caption">{formatTime(task.due_date)}</AppText> : null}
+              </View>
+              <CheckCircle checked={task.is_completed} />
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => handleDelete(task)} hitSlop={8} style={styles.deleteBtn}>
               <Ionicons name="trash-outline" size={18} color={palette.textMuted} />
             </TouchableOpacity>
-            <CheckCircle checked={task.is_completed} />
-          </TouchableOpacity>
+          </View>
         ))
       )}
 
@@ -362,6 +363,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     ...shadows.sm,
   },
+  taskMain: { flex: 1, flexDirection: 'row', alignItems: 'center' },
   taskDot: { width: 4, height: 40, borderRadius: 2, marginRight: spacing.md },
   taskInfo: { flex: 1 },
   taskDone: { textDecorationLine: 'line-through', color: palette.textMuted },

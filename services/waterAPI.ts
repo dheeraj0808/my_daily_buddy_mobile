@@ -10,11 +10,17 @@ export interface TodayWaterSummary {
   remainingMl: number;
   logCount: number;
   goalMet: boolean;
+  logs?: WaterLog[];
 }
 
-export async function getTodayWater(): Promise<TodayWaterSummary> {
+export interface WaterLog {
+  id: string;
+  amount_ml: number;
+}
+
+export async function getTodayWater(includeLogs = false): Promise<TodayWaterSummary> {
   const response = await api.get('/water/today', {
-    params: { tz: getDeviceTimezone() },
+    params: { tz: getDeviceTimezone(), ...(includeLogs ? { includeLogs: 'true' } : {}) },
   });
   return unwrapData<TodayWaterSummary>(response);
 }
@@ -31,4 +37,9 @@ export async function logWater(amountMl: number): Promise<TodayWaterSummary> {
 export async function updateWaterGoal(goalMl: number): Promise<{ goalMl: number }> {
   const response = await api.put('/water/goal', { goalMl });
   return unwrapData(response);
+}
+
+export async function deleteWaterLog(id: string): Promise<TodayWaterSummary> {
+  await api.delete(`/water/log/${id}`);
+  return getTodayWater();
 }

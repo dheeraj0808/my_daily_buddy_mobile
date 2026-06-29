@@ -61,6 +61,10 @@ export default function RegisterScreen() {
         phone: phone.trim() || undefined,
       });
       const userId = result?.data?.userId;
+      if (!userId) {
+        setErrors({ general: 'Registration started but user ID was missing. Please try again.' });
+        return;
+      }
       router.push({
         pathname: '/(auth)/verify-otp',
         params: { userId, email: email.trim().toLowerCase(), source: 'register' },

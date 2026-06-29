@@ -1,30 +1,38 @@
-import { router } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { useEffect } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 
 /**
- * Redirects based on auth state: authenticated users → dashboard, others → landing.
+ * Redirects on cold start / auth state change without interrupting in-progress OTP flow.
  */
 export function useInitialAuthRedirect() {
   const { isReady, isAuthenticated, refreshProfile } = useAuth();
+  const segments = useSegments();
 
   useEffect(() => {
     if (!isReady) return;
 
+    const inAuthGroup = segments[0] === '(auth)';
+
     if (isAuthenticated) {
-      refreshProfile();
-      router.replace('/(tabs)/dashboard');
-    } else {
-      router.replace('/(auth)');
+      if (inAuthGroup) {
+        refreshProfile();
+        router.replace('/(tabs)/dashboard');
+      }
+      return;
     }
-  }, [isReady, isAuthenticated, refreshProfile]);
+
+    if (!inAuthGroup) {
+      router.replace('/(auth)/login');
+    }
+  }, [isReady, isAuthenticated, refreshProfile, segments]);
 
   return { isReady, isAuthenticated };
 }
 
 /**
- * Protects tab routes — redirects unauthenticated users to auth landing.
+ * Protects tab routes — redirects unauthenticated users to login.
  */
 export function useRequireAuth() {
   const { isReady, isAuthenticated } = useAuth();

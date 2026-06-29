@@ -8,7 +8,7 @@ import {
   type Reminder,
   type RepeatType,
 } from '@/services/reminderAPI';
-import { getErrorMessage } from '@/utils/errors';
+import { getErrorMessage, isAuthError } from '@/utils/errors';
 
 export function useReminders() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
@@ -25,7 +25,9 @@ export function useReminders() {
       const res = await listReminders();
       setReminders(res.data);
     } catch (err) {
-      setError(getErrorMessage(err));
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

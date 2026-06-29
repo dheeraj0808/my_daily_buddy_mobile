@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/contexts/AuthContext';
 import { authService } from '@/services/authService';
 import { palette, radius, spacing, typography } from '@/theme';
+import { getErrorMessage } from '@/utils/errors';
 import { storage } from '@/utils/storage';
 
 const OTP_LENGTH = 6;
@@ -77,7 +78,17 @@ export default function VerifyOtpScreen() {
     }
   };
 
+  useEffect(() => {
+    if (!userId) {
+      setError('Session expired. Please sign in again.');
+    }
+  }, [userId]);
+
   const handleVerify = useCallback(async () => {
+    if (!userId) {
+      setError('Missing user session. Go back and try again.');
+      return;
+    }
     if (!isComplete || loading) return;
     setError('');
     setLoading(true);
@@ -92,9 +103,8 @@ export default function VerifyOtpScreen() {
       setAuthenticated(true);
       await refreshProfile();
       router.replace('/(tabs)/dashboard');
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg[0] : msg || 'Invalid OTP. Please try again.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Invalid OTP. Please try again.'));
       setOtp(Array(OTP_LENGTH).fill(''));
       setTimeout(() => {
         inputRefs.current[0]?.focus();
@@ -110,6 +120,10 @@ export default function VerifyOtpScreen() {
   }, [isComplete, handleVerify, loading]);
 
   const handleResend = async () => {
+    if (!userId) {
+      setError('Missing user session. Go back and try again.');
+      return;
+    }
     if (timer > 0 || resending) return;
     setResending(true);
     setError('');
@@ -118,9 +132,8 @@ export default function VerifyOtpScreen() {
       setTimer(RESEND_SECONDS);
       setOtp(Array(OTP_LENGTH).fill(''));
       setTimeout(() => inputRefs.current[0]?.focus(), 100);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message;
-      setError(Array.isArray(msg) ? msg[0] : 'Failed to resend OTP.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, 'Failed to resend OTP.'));
     } finally {
       setResending(false);
     }

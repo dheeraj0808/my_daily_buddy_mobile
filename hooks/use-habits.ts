@@ -12,11 +12,36 @@ import {
   type Habit,
   type HabitStreak,
 } from '@/services/habitAPI';
-import { getErrorMessage } from '@/utils/errors';
+import { getErrorMessage, isAuthError } from '@/utils/errors';
+
+const EMPTY_STREAK: HabitStreak = {
+  currentStreak: 0,
+  longestStreak: 0,
+  totalCompletions: 0,
+  completionRate: 0,
+  lastCompletedDate: null,
+};
 
 export interface HabitWithStreak extends Habit {
   streak: HabitStreak;
   completedToday: boolean;
+}
+
+async function loadHabitWithStreak(habit: Habit): Promise<HabitWithStreak> {
+  try {
+    const streak = await getHabitStreak(habit.id);
+    return {
+      ...habit,
+      streak,
+      completedToday: isCompletedToday(streak),
+    };
+  } catch {
+    return {
+      ...habit,
+      streak: EMPTY_STREAK,
+      completedToday: false,
+    };
+  }
 }
 
 export function useHabits() {
@@ -32,19 +57,12 @@ export function useHabits() {
 
     try {
       const res = await listHabits();
-      const withStreaks = await Promise.all(
-        res.data.map(async (habit) => {
-          const streak = await getHabitStreak(habit.id);
-          return {
-            ...habit,
-            streak,
-            completedToday: isCompletedToday(streak),
-          };
-        })
-      );
+      const withStreaks = await Promise.all(res.data.map(loadHabitWithStreak));
       setHabits(withStreaks);
     } catch (err) {
-      setError(getErrorMessage(err));
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -55,28 +73,46 @@ export function useHabits() {
     load();
   }, [load]);
 
-  const toggleCheckIn = async (habit: HabitWithStreak) => {
-    if (habit.completedToday) {
-      await undoCheckIn(habit.id);
-    } else {
-      await checkInHabit(habit.id);
+  const runMutation = async (fn: () => Promise<void>) => {
+    try {
+      await fn();
+    } catch (err) {
+      const message = getErrorMessage(err);
+      setError(message);
+      throw err;
     }
-    await load(true);
+  };
+
+  const toggleCheckIn = async (habit: HabitWithStreak) => {
+    await runMutation(async () => {
+      if (habit.completedToday) {
+        await undoCheckIn(habit.id);
+      } else {
+        await checkInHabit(habit.id);
+      }
+      await load(true);
+    });
   };
 
   const addHabit = async (payload: Parameters<typeof createHabit>[0]) => {
-    await createHabit(payload);
-    await load(true);
+    await runMutation(async () => {
+      await createHabit(payload);
+      await load(true);
+    });
   };
 
   const editHabit = async (id: string, payload: Parameters<typeof updateHabit>[1]) => {
-    await updateHabit(id, payload);
-    await load(true);
+    await runMutation(async () => {
+      await updateHabit(id, payload);
+      await load(true);
+    });
   };
 
   const removeHabit = async (id: string) => {
-    await deleteHabit(id);
-    await load(true);
+    await runMutation(async () => {
+      await deleteHabit(id);
+      await load(true);
+    });
   };
 
   return {

@@ -100,7 +100,7 @@ export default function GoalsScreen() {
               onLongPress={() =>
                 Alert.alert('Delete goal', `Remove "${goal.title}"?`, [
                   { text: 'Cancel', style: 'cancel' },
-                  { text: 'Delete', style: 'destructive', onPress: () => removeGoal(goal.id) },
+                  { text: 'Delete', style: 'destructive', onPress: () => removeGoal(goal.id).catch((err) => Alert.alert('Error', getErrorMessage(err))) },
                 ])
               }
             >
