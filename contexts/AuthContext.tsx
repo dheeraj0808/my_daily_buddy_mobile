@@ -5,6 +5,7 @@ import { getProfile, type UserProfile } from '@/services/profileAPI';
 import { storage } from '@/utils/storage';
 import { isAuthError } from '@/utils/errors';
 import { onSessionExpired } from '@/utils/sessionEvents';
+import { usePushNotifications } from '@/hooks/use-push-notifications';
 
 interface AuthContextValue {
   isAuthenticated: boolean;
@@ -65,6 +66,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })();
     });
   }, [signOut]);
+
+  usePushNotifications(isReady && isAuthenticated);
 
   const value = useMemo(
     () => ({
