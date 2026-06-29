@@ -54,7 +54,7 @@ function initials(first: string | null, last: string | null, email: string): str
 
 const QUICK_ACTIONS = [
   { label: 'Reminder', icon: 'alarm-outline' as const, route: '/(tabs)/reminders', colors: gradients.warning },
-  { label: 'Habit', icon: 'checkmark-circle-outline' as const, route: '/(tabs)/habits', colors: gradients.success },
+  { label: 'Track', icon: 'trending-up-outline' as const, route: '/(tabs)/track', colors: gradients.success },
   { label: 'Health', icon: 'heart-outline' as const, route: '/(tabs)/health', colors: gradients.health },
 ] as const;
 

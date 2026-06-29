@@ -36,6 +36,7 @@ export const gradients = {
   warning: ['#F59E0B', '#D97706'] as const,
   health: ['#EF4444', '#DC2626'] as const,
   goals: ['#8B5CF6', '#6366F1'] as const,
+  track: ['#10B981', '#8B5CF6'] as const,
   auth: ['#4F46E5', '#3730A3'] as const,
 } as const;
 
