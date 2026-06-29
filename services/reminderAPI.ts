@@ -14,6 +14,11 @@ export interface Reminder {
   repeat_days: number[] | null;
   timezone: string;
   is_active: boolean;
+  last_triggered_at: string | null;
+  snoozed_until: string | null;
+  last_completed_date: string | null;
+  linked_habit_id: string | null;
+  linked_task_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -26,6 +31,8 @@ export interface CreateReminderPayload {
   repeatDays?: number[];
   timezone?: string;
   isActive?: boolean;
+  linkedHabitId?: string | null;
+  linkedTaskId?: string | null;
 }
 
 export interface UpdateReminderPayload {
@@ -36,6 +43,8 @@ export interface UpdateReminderPayload {
   repeatDays?: number[];
   timezone?: string;
   isActive?: boolean;
+  linkedHabitId?: string | null;
+  linkedTaskId?: string | null;
 }
 
 const tz = () => getDeviceTimezone();
@@ -67,6 +76,21 @@ export async function updateReminder(id: string, payload: UpdateReminderPayload)
 
 export async function deleteReminder(id: string): Promise<void> {
   await api.delete(`/reminders/${id}`);
+}
+
+export async function snoozeReminder(id: string, minutes: number): Promise<Reminder> {
+  const response = await api.post(`/reminders/${id}/snooze`, { minutes });
+  return unwrapData<Reminder>(response);
+}
+
+export async function markReminderDone(id: string): Promise<Reminder> {
+  const response = await api.post(`/reminders/${id}/done`);
+  return unwrapData<Reminder>(response);
+}
+
+export function isReminderDoneToday(reminder: Reminder): boolean {
+  if (!reminder.last_completed_date) return false;
+  return reminder.last_completed_date === new Date().toLocaleDateString('sv-SE');
 }
 
 export function formatRepeatType(repeat: RepeatType): string {

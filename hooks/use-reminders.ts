@@ -4,6 +4,8 @@ import {
   createReminder,
   deleteReminder,
   listReminders,
+  markReminderDone,
+  snoozeReminder,
   updateReminder,
   type Reminder,
   type RepeatType,
@@ -47,6 +49,8 @@ export function useReminders() {
     title: string;
     remindAt: string;
     repeatType?: RepeatType;
+    linkedHabitId?: string | null;
+    linkedTaskId?: string | null;
   }) => {
     await createReminder(payload);
     await load(true);
@@ -54,6 +58,16 @@ export function useReminders() {
 
   const removeReminder = async (id: string) => {
     await deleteReminder(id);
+    await load(true);
+  };
+
+  const snooze = async (id: string, minutes: number) => {
+    await snoozeReminder(id, minutes);
+    await load(true);
+  };
+
+  const markDone = async (id: string) => {
+    await markReminderDone(id);
     await load(true);
   };
 
@@ -67,5 +81,7 @@ export function useReminders() {
     toggleActive,
     addReminder,
     removeReminder,
+    snooze,
+    markDone,
   };
 }
