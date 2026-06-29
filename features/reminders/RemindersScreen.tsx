@@ -13,8 +13,8 @@ import ScreenHeader from '@/components/ui/ScreenHeader';
 import { useReminders } from '@/hooks/use-reminders';
 import { formatRepeatType, REMINDER_COLORS } from '@/services/reminderAPI';
 import { palette, radius, shadows, spacing } from '@/theme';
-import { formatTime } from '@/utils/timezone';
 import { getErrorMessage } from '@/utils/errors';
+import { formatTime } from '@/utils/timezone';
 
 const FILTERS = ['All', 'Active', 'Inactive'] as const;
 
@@ -58,21 +58,25 @@ export default function RemindersScreen() {
 
   return (
     <>
-      <Screen refreshing={refreshing} onRefresh={refresh} refreshTint={palette.warning} contentStyle={styles.scroll}>
-        <ScreenHeader
-          accent="warning"
-          title="Reminders"
-          subtitle={`${activeCount} active · ${inactiveCount} inactive`}
-          onAdd={() => setModalVisible(true)}
-          addLabel="+ Add"
-          stats={[
-            { value: reminders.length, label: 'Total' },
-            { value: inactiveCount, label: 'Inactive' },
-            { value: activeCount, label: 'Active' },
-          ]}
-          style={styles.header}
-        />
-
+      <Screen
+        refreshing={refreshing}
+        onRefresh={refresh}
+        refreshTint={palette.warning}
+        header={
+          <ScreenHeader
+            accent="warning"
+            title="Reminders"
+            subtitle={`${activeCount} active · ${inactiveCount} inactive`}
+            onAdd={() => setModalVisible(true)}
+            addLabel="+ Add"
+            stats={[
+              { value: reminders.length, label: 'Total' },
+              { value: inactiveCount, label: 'Inactive' },
+              { value: activeCount, label: 'Active' },
+            ]}
+          />
+        }
+      >
         <FilterChips options={FILTERS} value={filter} onChange={setFilter} accent={palette.warning} />
         {error ? <ErrorBanner message={error} onRetry={reload} /> : null}
 
@@ -81,11 +85,11 @@ export default function RemindersScreen() {
         ) : (
           filtered.map((r, idx) => {
             const color = REMINDER_COLORS[idx % REMINDER_COLORS.length];
-            const dismissed = !r.is_active;
+            const isInactive = !r.is_active;
             return (
               <TouchableOpacity
                 key={r.id}
-                style={[styles.card, dismissed && styles.cardDone]}
+                style={[styles.card, isInactive && styles.cardDone]}
                 onPress={() =>
                   toggleActive(r).catch((err) => Alert.alert('Error', getErrorMessage(err)))
                 }
@@ -104,7 +108,7 @@ export default function RemindersScreen() {
               >
                 <View style={[styles.accentBar, { backgroundColor: color }]} />
                 <View style={styles.cardBody}>
-                  <AppText variant="title" style={dismissed ? styles.strikeText : undefined}>
+                  <AppText variant="title" style={isInactive ? styles.strikeText : undefined}>
                     {r.title}
                   </AppText>
                   <View style={styles.cardMeta}>
@@ -117,7 +121,7 @@ export default function RemindersScreen() {
                     </View>
                   </View>
                 </View>
-                <CheckCircle checked={dismissed} />
+                <CheckCircle checked={r.is_active} color={palette.warning} />
               </TouchableOpacity>
             );
           })
@@ -133,14 +137,11 @@ export default function RemindersScreen() {
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: spacing.xl },
-  header: { marginHorizontal: -spacing.lg, marginTop: -spacing.md },
   card: {
     backgroundColor: palette.surface,
     borderRadius: radius.lg,
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.sm,
     overflow: 'hidden',
     ...shadows.sm,

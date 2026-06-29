@@ -10,7 +10,7 @@ import GoalsPanel from '@/features/goals/GoalsPanel';
 import HabitsPanel from '@/features/habits/HabitsPanel';
 import { useGoals } from '@/hooks/use-goals';
 import { useHabits } from '@/hooks/use-habits';
-import { palette, spacing } from '@/theme';
+import { palette } from '@/theme';
 
 const SEGMENTS = ['Habits', 'Goals'] as const;
 type Segment = (typeof SEGMENTS)[number];
@@ -52,17 +52,16 @@ export default function TrackScreen() {
     }
   }, [segmentParam]);
 
-  const handleHabitsSummary = useCallback((summary: { subtitle: string }) => {
-    if (segmentToKey(segment) === 'habits') setSubtitle(summary.subtitle);
-  }, [segment]);
-
-  const handleGoalsSummary = useCallback((summary: { subtitle: string }) => {
-    if (segmentToKey(segment) === 'goals') setSubtitle(summary.subtitle);
-  }, [segment]);
-
-  const handleSegmentChange = (next: Segment) => {
-    setSegment(next);
-  };
+  useEffect(() => {
+    if (isHabits) {
+      const completed = habitsState.habits.filter((h) => h.completedToday).length;
+      setSubtitle(`${completed} of ${habitsState.habits.length} habits done today`);
+    } else {
+      setSubtitle(
+        `${goalsState.stats?.total ?? goalsState.goals.length} goals · ${Math.round(goalsState.stats?.completionRate ?? 0)}% completion`
+      );
+    }
+  }, [segment, isHabits, habitsState.habits, goalsState.goals, goalsState.stats]);
 
   const handleAdd = () => {
     if (isHabits) openHabitsAdd.current();
@@ -78,37 +77,34 @@ export default function TrackScreen() {
       refreshing={activeState.refreshing}
       onRefresh={activeState.refresh}
       refreshTint={isHabits ? palette.success : palette.secondary}
-      contentStyle={styles.scroll}
+      header={
+        <ScreenHeader
+          accent="track"
+          title="Track"
+          subtitle={subtitle}
+          onAdd={handleAdd}
+          addLabel="+ Add"
+        />
+      }
     >
-      <ScreenHeader
-        accent="track"
-        title="Track"
-        subtitle={subtitle}
-        onAdd={handleAdd}
-        addLabel="+ Add"
-        style={styles.header}
-      />
-
       <View style={styles.segmentWrap}>
         <FilterChips
           options={SEGMENTS}
           value={segment}
-          onChange={handleSegmentChange}
+          onChange={setSegment}
           accent={isHabits ? palette.success : palette.secondary}
         />
       </View>
 
       {isHabits ? (
-        <HabitsPanel state={habitsState} onAddReady={registerHabitsAdd} onSummaryChange={handleHabitsSummary} />
+        <HabitsPanel state={habitsState} onAddReady={registerHabitsAdd} />
       ) : (
-        <GoalsPanel state={goalsState} onAddReady={registerGoalsAdd} onSummaryChange={handleGoalsSummary} />
+        <GoalsPanel state={goalsState} onAddReady={registerGoalsAdd} />
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  scroll: { paddingBottom: spacing.xl },
-  header: { marginHorizontal: -spacing.lg, marginTop: -spacing.md },
-  segmentWrap: { marginBottom: spacing.sm },
+  segmentWrap: { marginBottom: 4 },
 });
