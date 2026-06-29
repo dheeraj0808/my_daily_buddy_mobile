@@ -1,5 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
+
+import AppText from '@/components/ui/AppText';
+import { palette, radius, spacing } from '@/theme';
 
 interface Props {
   message: string;
@@ -9,10 +12,14 @@ interface Props {
 export default function ErrorBanner({ message, onRetry }: Props) {
   return (
     <View style={styles.wrap}>
-      <Text style={styles.text}>{message}</Text>
+      <AppText variant="body" color={palette.error} style={styles.text}>
+        {message}
+      </AppText>
       {onRetry ? (
-        <TouchableOpacity onPress={onRetry}>
-          <Text style={styles.retry}>Retry</Text>
+        <TouchableOpacity onPress={onRetry} hitSlop={8}>
+          <AppText variant="label" color={palette.primaryLight}>
+            Retry
+          </AppText>
         </TouchableOpacity>
       ) : null}
     </View>
@@ -21,16 +28,17 @@ export default function ErrorBanner({ message, onRetry }: Props) {
 
 const styles = StyleSheet.create({
   wrap: {
-    backgroundColor: '#fef2f2',
-    borderRadius: 12,
-    padding: 14,
-    marginHorizontal: 20,
-    marginBottom: 12,
+    backgroundColor: '#FEF2F2',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
-  text: { flex: 1, color: '#dc2626', fontSize: 14 },
-  retry: { color: '#6366f1', fontWeight: '700', fontSize: 14 },
+  text: { flex: 1 },
 });

@@ -1,79 +1,54 @@
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TouchableOpacity,
-  Dimensions,
   Animated,
+  Dimensions,
+  SafeAreaView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, BorderRadius } from '../../constants/Colors';
+import Ionicons from '@expo/vector-icons/Ionicons';
+
+import AppText from '@/components/ui/AppText';
+import { gradients, palette, radius, shadows, spacing } from '@/theme';
 
 const { width, height } = Dimensions.get('window');
 
-// Mini checklist items for the phone mockup
-const CHECKLIST = [
-  { label: 'Morning Yoga', icon: '🧘', done: true },
-  { label: 'Email Review', icon: '📧', done: true },
-  { label: 'Team Standup', icon: '👥', done: false },
-];
-
 const FEATURES = [
-  { icon: '🔔', label: 'Smart\nReminders' },
-  { icon: '📈', label: 'Habit\nTracking' },
-  { icon: '❤️', label: 'Health\nOverview' },
+  { icon: 'notifications-outline' as const, label: 'Smart\nReminders' },
+  { icon: 'trending-up-outline' as const, label: 'Habit\nTracking' },
+  { icon: 'heart-outline' as const, label: 'Health\nInsights' },
 ];
 
 export default function LandingScreen() {
-  // Fade-in animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const mockupAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 700,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 700,
-        useNativeDriver: true,
-      }),
-      Animated.timing(mockupAnim, {
-        toValue: 1,
-        duration: 900,
-        delay: 200,
-        useNativeDriver: true,
-      }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 700, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 700, useNativeDriver: true }),
+      Animated.timing(mockupAnim, { toValue: 1, duration: 900, delay: 200, useNativeDriver: true }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim, mockupAnim]);
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Background blobs */}
       <View style={styles.blobTopRight} />
       <View style={styles.blobBottomLeft} />
 
-      {/* Header */}
-      <Animated.View
-        style={[
-          styles.header,
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-        ]}
-      >
-        <Text style={styles.appName}>My Daily Buddy</Text>
-        <Text style={styles.tagline}>
-          Manage your routine, reminders, and health easily
-        </Text>
+      <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+        <AppText variant="display" style={styles.appName}>
+          My Daily Buddy
+        </AppText>
+        <AppText variant="caption" style={styles.tagline}>
+          Manage your routine, reminders, and wellness in one place
+        </AppText>
       </Animated.View>
 
-      {/* Phone Mockup */}
       <Animated.View
         style={[
           styles.mockupWrapper,
@@ -81,90 +56,62 @@ export default function LandingScreen() {
             opacity: mockupAnim,
             transform: [
               {
-                translateY: mockupAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [40, 0],
-                }),
+                translateY: mockupAnim.interpolate({ inputRange: [0, 1], outputRange: [40, 0] }),
               },
             ],
           },
         ]}
       >
         <View style={styles.mockupCard}>
-          {/* Mockup Header */}
           <View style={styles.mockupHeader}>
-            <Text style={styles.mockupTitle}>Daily Routine</Text>
-            <Text style={styles.mockupAvatar}>👤</Text>
+            <AppText variant="h2">Daily routine</AppText>
+            <View style={styles.mockupAvatar}>
+              <Ionicons name="person" size={18} color={palette.primaryLight} />
+            </View>
           </View>
-
-          {/* Checklist */}
-          <View style={styles.checklistContainer}>
-            {CHECKLIST.map((item, i) => (
-              <View
-                key={i}
-                style={[styles.checklistItem, !item.done && styles.checklistDim]}
-              >
-                <Text style={styles.checkIcon}>
-                  {item.done ? '☑️' : '⬜'}
-                </Text>
-                <Text style={styles.checkLabel}>{item.label}</Text>
-                <Text style={styles.checkItemIcon}>{item.icon}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Reminder card */}
-          <LinearGradient
-            colors={['#2563eb', '#004ac6']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.reminderCard}
-          >
-            <Text style={styles.reminderLabel}>Next Reminder</Text>
-            <Text style={styles.reminderTime}>1:30 PM – Project Kickoff</Text>
-            <Text style={styles.reminderClock}>⏱</Text>
+          {['Morning yoga', 'Email review', 'Team standup'].map((item, i) => (
+            <View key={item} style={[styles.checklistItem, i === 2 && styles.checklistDim]}>
+              <Ionicons
+                name={i < 2 ? 'checkbox' : 'square-outline'}
+                size={18}
+                color={i < 2 ? palette.success : palette.textMuted}
+              />
+              <AppText variant="body" style={styles.checkLabel}>
+                {item}
+              </AppText>
+            </View>
+          ))}
+          <LinearGradient colors={[...gradients.auth]} style={styles.reminderCard}>
+            <AppText variant="caption" color={palette.onPrimaryMuted}>
+              Next reminder
+            </AppText>
+            <AppText variant="title" color={palette.onPrimary}>
+              1:30 PM · Project kickoff
+            </AppText>
           </LinearGradient>
-
-          {/* Health stats */}
-          <View style={styles.statsRow}>
-            <View style={styles.statCard}>
-              <Text style={styles.statCaption}>Steps</Text>
-              <Text style={[styles.statValue, { color: Colors.primary }]}>6,432</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statCaption}>Sleep</Text>
-              <Text style={[styles.statValue, { color: '#006c49' }]}>7.5 hrs</Text>
-            </View>
-          </View>
         </View>
       </Animated.View>
 
-      {/* Features row */}
       <Animated.View style={[styles.featuresRow, { opacity: fadeAnim }]}>
-        {FEATURES.map((f, i) => (
-          <View key={i} style={styles.featureItem}>
+        {FEATURES.map((f) => (
+          <View key={f.label} style={styles.featureItem}>
             <View style={styles.featureIconCircle}>
-              <Text style={styles.featureEmoji}>{f.icon}</Text>
+              <Ionicons name={f.icon} size={22} color={palette.primaryLight} />
             </View>
-            <Text style={styles.featureLabel}>{f.label}</Text>
+            <AppText variant="caption" style={styles.featureLabel}>
+              {f.label}
+            </AppText>
           </View>
         ))}
       </Animated.View>
 
-      {/* Get Started Button */}
       <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={() => router.push('/(auth)/login')}
-        >
-          <LinearGradient
-            colors={['#2563eb', '#004ac6']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.getStartedBtn}
-          >
-            <Text style={styles.getStartedText}>Get Started</Text>
-            <Text style={styles.getStartedArrow}>→</Text>
+        <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/(auth)/login')}>
+          <LinearGradient colors={[...gradients.auth]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.getStartedBtn}>
+            <AppText variant="title" color={palette.onPrimary}>
+              Get started
+            </AppText>
+            <Ionicons name="arrow-forward" size={20} color={palette.onPrimary} />
           </LinearGradient>
         </TouchableOpacity>
       </Animated.View>
@@ -175,20 +122,19 @@ export default function LandingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9ff',
+    backgroundColor: '#F8F9FF',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: Spacing.lg,
+    paddingBottom: spacing.lg,
   },
-  // Background accents
   blobTopRight: {
     position: 'absolute',
     top: -height * 0.1,
     right: -width * 0.2,
     width: width * 0.8,
     height: height * 0.4,
-    borderRadius: 9999,
-    backgroundColor: 'rgba(37,99,235,0.08)',
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(79,70,229,0.08)',
   },
   blobBottomLeft: {
     position: 'absolute',
@@ -196,194 +142,61 @@ const styles = StyleSheet.create({
     left: -width * 0.2,
     width: width * 0.7,
     height: height * 0.35,
-    borderRadius: 9999,
-    backgroundColor: 'rgba(78,222,163,0.08)',
+    borderRadius: radius.full,
+    backgroundColor: 'rgba(16,185,129,0.08)',
   },
-  // Header
-  header: {
-    width: '100%',
-    paddingHorizontal: 20,
-    paddingTop: Spacing.xl,
-    alignItems: 'center',
+  header: { width: '100%', paddingHorizontal: spacing.lg, paddingTop: spacing.xl, alignItems: 'center' },
+  appName: { textAlign: 'center', marginBottom: spacing.xs },
+  tagline: { textAlign: 'center', maxWidth: 280, lineHeight: 20 },
+  mockupWrapper: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  mockupCard: {
+    width: 268,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    borderRadius: radius.xxl,
+    padding: spacing.lg,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: palette.borderLight,
+    ...shadows.lg,
   },
-  appName: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#0b1c30',
-    letterSpacing: -0.5,
-    textAlign: 'center',
-    marginBottom: Spacing.xs,
-  },
-  tagline: {
-    fontSize: 14,
-    color: '#434655',
-    textAlign: 'center',
-    lineHeight: 20,
-    maxWidth: 240,
-  },
-  // Mockup
-  mockupWrapper: {
-    flex: 1,
+  mockupHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  mockupAvatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  mockupCard: {
-    width: 268,
-    backgroundColor: 'rgba(255,255,255,0.82)',
-    borderRadius: 36,
-    padding: 20,
-    gap: 14,
-    // Glass effect
-    borderWidth: 1,
-    borderColor: 'rgba(226,232,240,0.8)',
-    // Shadow
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.1,
-    shadowRadius: 28,
-    elevation: 12,
-  },
-  mockupHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  mockupTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0b1c30',
-  },
-  mockupAvatar: {
-    fontSize: 20,
-  },
-  // Checklist
-  checklistContainer: {
-    gap: 10,
-  },
-  checklistItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  checklistDim: {
-    opacity: 0.4,
-  },
-  checkIcon: {
-    fontSize: 16,
-  },
-  checkLabel: {
-    fontSize: 14,
-    color: '#0b1c30',
-    flex: 1,
-    fontWeight: '500',
-  },
-  checkItemIcon: {
-    fontSize: 14,
-  },
-  // Reminder
-  reminderCard: {
-    borderRadius: 18,
-    padding: 16,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  reminderLabel: {
-    fontSize: 11,
-    color: 'rgba(255,255,255,0.75)',
-    fontWeight: '600',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  reminderTime: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#ffffff',
-    lineHeight: 20,
-  },
-  reminderClock: {
-    position: 'absolute',
-    top: 10,
-    right: 14,
-    fontSize: 28,
-    opacity: 0.3,
-  },
-  // Stats
-  statsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#eff4ff',
-    borderRadius: 14,
-    padding: 12,
-  },
-  statCaption: {
-    fontSize: 11,
-    color: '#434655',
-    fontWeight: '500',
-    marginBottom: 2,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  // Features
+  checklistItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  checklistDim: { opacity: 0.45 },
+  checkLabel: { flex: 1 },
+  reminderCard: { borderRadius: radius.lg, padding: spacing.md },
   featuresRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     width: '100%',
-    paddingHorizontal: 20,
-    marginBottom: Spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
   },
-  featureItem: {
-    alignItems: 'center',
-    gap: 6,
-  },
+  featureItem: { alignItems: 'center', gap: 6 },
   featureIconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#dce9ff',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#EEF2FF',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  featureEmoji: {
-    fontSize: 20,
-  },
-  featureLabel: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#434655',
-    textAlign: 'center',
-    letterSpacing: 0.3,
-  },
-  // Footer
-  footer: {
-    width: '100%',
-    paddingHorizontal: 20,
-  },
+  featureLabel: { textAlign: 'center', fontFamily: undefined },
+  footer: { width: '100%', paddingHorizontal: spacing.lg },
   getStartedBtn: {
-    height: 52,
-    borderRadius: 9999,
+    height: 56,
+    borderRadius: radius.full,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    shadowColor: '#2563eb',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  getStartedText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  getStartedArrow: {
-    fontSize: 18,
-    color: '#ffffff',
-    fontWeight: '700',
+    gap: spacing.sm,
+    ...shadows.lg,
   },
 });

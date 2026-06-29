@@ -1,21 +1,17 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
-import {
-  Alert,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorBanner from '@/components/shared/ErrorBanner';
 import FormModal, { FormField } from '@/components/shared/FormModal';
 import LoadingState from '@/components/shared/LoadingState';
+import AppText from '@/components/ui/AppText';
+import Card from '@/components/ui/Card';
+import { CheckCircle, SectionHeader } from '@/components/ui/FilterChips';
+import Screen from '@/components/ui/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboard } from '@/hooks/use-dashboard';
 import {
@@ -26,14 +22,15 @@ import {
   type Task,
   updateTask,
 } from '@/services/taskAPI';
+import { gradients, palette, radius, shadows, spacing } from '@/theme';
 import { formatTime } from '@/utils/timezone';
 import { getErrorMessage } from '@/utils/errors';
 
 function getGreeting() {
   const h = new Date().getHours();
-  if (h < 12) return 'Good Morning';
-  if (h < 17) return 'Good Afternoon';
-  return 'Good Evening';
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  return 'Good evening';
 }
 
 function getDate() {
@@ -55,6 +52,12 @@ function initials(first: string | null, last: string | null, email: string): str
   return email.slice(0, 2).toUpperCase();
 }
 
+const QUICK_ACTIONS = [
+  { label: 'Reminder', icon: 'alarm-outline' as const, route: '/(tabs)/reminders', colors: gradients.warning },
+  { label: 'Habit', icon: 'checkmark-circle-outline' as const, route: '/(tabs)/habits', colors: gradients.success },
+  { label: 'Health', icon: 'heart-outline' as const, route: '/(tabs)/health', colors: gradients.health },
+] as const;
+
 export default function DashboardScreen() {
   const { profile } = useAuth();
   const { tasks, loading, refreshing, error, stats, reload, refresh } = useDashboard();
@@ -70,6 +73,10 @@ export default function DashboardScreen() {
   const total = tasks.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
   const visibleTasks = showAll ? tasks : tasks.slice(0, 5);
+
+  const firstName = profile?.first_name ?? null;
+  const lastName = profile?.last_name ?? null;
+  const email = profile?.email ?? '';
 
   const openCreate = () => {
     setEditingTask(null);
@@ -132,143 +139,138 @@ export default function DashboardScreen() {
 
   if (loading && !refreshing) return <LoadingState />;
 
-  const firstName = profile?.first_name ?? null;
-  const lastName = profile?.last_name ?? null;
-  const email = profile?.email ?? 'User';
+  const name = profile ? displayName(firstName, lastName, email) : 'there';
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#6366f1" />}
-      >
-        {error ? <ErrorBanner message={error} onRetry={reload} /> : null}
+    <Screen refreshing={refreshing} onRefresh={refresh} contentStyle={styles.scroll}>
+      {error ? <ErrorBanner message={error} onRetry={reload} /> : null}
 
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>{getGreeting()} 👋</Text>
-            <Text style={styles.name}>{displayName(firstName, lastName, email)}</Text>
-            <Text style={styles.date}>{getDate()}</Text>
+      <LinearGradient colors={[...gradients.primaryDeep]} style={styles.hero}>
+        <View style={styles.heroTop}>
+          <View style={styles.heroText}>
+            <AppText variant="caption" color={palette.onPrimaryMuted}>
+              {getGreeting()}
+            </AppText>
+            <AppText variant="h1" color={palette.onPrimary}>
+              {name}
+            </AppText>
+            <AppText variant="caption" color={palette.onPrimaryMuted}>
+              {getDate()}
+            </AppText>
           </View>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials(firstName, lastName, email)}</Text>
-          </View>
+          <TouchableOpacity style={styles.avatar} onPress={() => router.push('/(tabs)/profile')}>
+            <AppText variant="title" color={palette.primaryLight}>
+              {profile ? initials(firstName, lastName, email) : '?'}
+            </AppText>
+          </TouchableOpacity>
         </View>
 
-        <LinearGradient colors={['#6366f1', '#8b5cf6']} style={styles.progressCard}>
-          <Text style={styles.progressLabel}>Today's Progress</Text>
-          <Text style={styles.progressPct}>{pct}%</Text>
+        <View style={styles.progressInner}>
+          <View style={styles.progressRow}>
+            <AppText variant="label" color={palette.onPrimaryMuted}>
+              Today&apos;s progress
+            </AppText>
+            <AppText variant="h1" color={palette.onPrimary}>
+              {pct}%
+            </AppText>
+          </View>
           <View style={styles.progressBarBg}>
-            <View style={[styles.progressBarFill, { width: `${pct}%` }]} />
+            <View style={[styles.progressBarFill, { width: `${Math.max(pct, 2)}%` }]} />
           </View>
-          <Text style={styles.progressSub}>
+          <AppText variant="caption" color={palette.onPrimaryMuted}>
             {done} of {total} tasks completed
-          </Text>
-        </LinearGradient>
-
-        <View style={styles.statsRow}>
-          <View style={[styles.statCard, { borderTopColor: '#f59e0b' }]}>
-            <Text style={styles.statIcon}>🔥</Text>
-            <Text style={styles.statNum}>{stats.habitStreak}</Text>
-            <Text style={styles.statLabel}>Day Streak</Text>
-          </View>
-          <View style={[styles.statCard, { borderTopColor: '#10b981' }]}>
-            <Text style={styles.statIcon}>✅</Text>
-            <Text style={styles.statNum}>{pct}%</Text>
-            <Text style={styles.statLabel}>Completed</Text>
-          </View>
-          <View style={[styles.statCard, { borderTopColor: '#6366f1' }]}>
-            <Text style={styles.statIcon}>⏰</Text>
-            <Text style={styles.statNum}>{stats.reminderCount}</Text>
-            <Text style={styles.statLabel}>Reminders</Text>
-          </View>
+          </AppText>
         </View>
+      </LinearGradient>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Today's Schedule</Text>
-            {tasks.length > 5 ? (
-              <TouchableOpacity onPress={() => setShowAll((v) => !v)}>
-                <Text style={styles.seeAll}>{showAll ? 'Show Less' : 'See All'}</Text>
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity onPress={openCreate}>
-                <Text style={styles.seeAll}>+ Add</Text>
-              </TouchableOpacity>
-            )}
+      <View style={styles.statsRow}>
+        <Card style={styles.statCard}>
+          <View style={[styles.statIcon, { backgroundColor: '#FFF7ED' }]}>
+            <Ionicons name="flame" size={18} color={palette.warning} />
           </View>
-
-          {visibleTasks.length === 0 ? (
-            <EmptyState emoji="📋" title="No tasks for today" subtitle="Tap + Add to create your first task." />
-          ) : (
-            visibleTasks.map((task) => (
-              <TouchableOpacity
-                key={task.id}
-                style={styles.taskCard}
-                onLongPress={() => openEdit(task)}
-                onPress={() => handleToggle(task)}
-                activeOpacity={0.85}
-              >
-                <View
-                  style={[styles.taskDot, { backgroundColor: PRIORITY_COLORS[task.priority] }]}
-                />
-                <View style={styles.taskInfo}>
-                  <Text style={[styles.taskTitle, task.is_completed && styles.taskDone]}>
-                    {task.title}
-                  </Text>
-                  {task.due_date ? (
-                    <Text style={styles.taskTime}>{formatTime(task.due_date)}</Text>
-                  ) : null}
-                </View>
-                <TouchableOpacity
-                  onPress={() => handleDelete(task)}
-                  hitSlop={8}
-                  style={styles.deleteBtn}
-                >
-                  <Text style={styles.deleteText}>×</Text>
-                </TouchableOpacity>
-                <View
-                  style={[
-                    styles.taskCheck,
-                    task.is_completed && { backgroundColor: '#10b981', borderColor: '#10b981' },
-                  ]}
-                >
-                  {task.is_completed && <Text style={styles.taskCheckMark}>✓</Text>}
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.actionsRow}>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/reminders')}>
-              <LinearGradient colors={['#6366f1', '#8b5cf6']} style={styles.actionGrad}>
-                <Text style={styles.actionEmoji}>⏰</Text>
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Add{'\n'}Reminder</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/habits')}>
-              <LinearGradient colors={['#10b981', '#059669']} style={styles.actionGrad}>
-                <Text style={styles.actionEmoji}>📋</Text>
-              </LinearGradient>
-              <Text style={styles.actionLabel}>New{'\n'}Habit</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/health')}>
-              <LinearGradient colors={['#f59e0b', '#d97706']} style={styles.actionGrad}>
-                <Text style={styles.actionEmoji}>❤️</Text>
-              </LinearGradient>
-              <Text style={styles.actionLabel}>Log{'\n'}Health</Text>
-            </TouchableOpacity>
+          <AppText variant="h2">{stats.habitStreak}</AppText>
+          <AppText variant="caption">Streak</AppText>
+        </Card>
+        <Card style={styles.statCard}>
+          <View style={[styles.statIcon, { backgroundColor: '#ECFDF5' }]}>
+            <Ionicons name="checkmark-done" size={18} color={palette.success} />
           </View>
-        </View>
-      </ScrollView>
+          <AppText variant="h2">{pct}%</AppText>
+          <AppText variant="caption">Done</AppText>
+        </Card>
+        <Card style={styles.statCard}>
+          <View style={[styles.statIcon, { backgroundColor: '#EEF2FF' }]}>
+            <Ionicons name="notifications-outline" size={18} color={palette.primaryLight} />
+          </View>
+          <AppText variant="h2">{stats.reminderCount}</AppText>
+          <AppText variant="caption">Alerts</AppText>
+        </Card>
+      </View>
+
+      <SectionHeader
+        title="Today's schedule"
+        actionLabel={tasks.length > 5 ? (showAll ? 'Show less' : 'See all') : '+ Add task'}
+        onAction={() => (tasks.length > 5 ? setShowAll((v) => !v) : openCreate())}
+      />
+
+      {visibleTasks.length === 0 ? (
+        <Card style={styles.emptyCard}>
+          <EmptyState
+            icon="clipboard-outline"
+            title="No tasks yet"
+            subtitle="Add your first task to start tracking your day."
+          />
+          <TouchableOpacity style={styles.emptyBtn} onPress={openCreate} activeOpacity={0.85}>
+            <Ionicons name="add" size={20} color={palette.white} />
+            <AppText variant="title" color={palette.white}>
+              Add task
+            </AppText>
+          </TouchableOpacity>
+        </Card>
+      ) : (
+        visibleTasks.map((task) => (
+          <TouchableOpacity
+            key={task.id}
+            style={styles.taskCard}
+            onLongPress={() => openEdit(task)}
+            onPress={() => handleToggle(task)}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.taskDot, { backgroundColor: PRIORITY_COLORS[task.priority] }]} />
+            <View style={styles.taskInfo}>
+              <AppText variant="title" style={task.is_completed ? styles.taskDone : undefined}>
+                {task.title}
+              </AppText>
+              {task.due_date ? <AppText variant="caption">{formatTime(task.due_date)}</AppText> : null}
+            </View>
+            <TouchableOpacity onPress={() => handleDelete(task)} hitSlop={8} style={styles.deleteBtn}>
+              <Ionicons name="trash-outline" size={18} color={palette.textMuted} />
+            </TouchableOpacity>
+            <CheckCircle checked={task.is_completed} />
+          </TouchableOpacity>
+        ))
+      )}
+
+      <SectionHeader title="Quick actions" />
+      <View style={styles.actionsRow}>
+        {QUICK_ACTIONS.map((action) => (
+          <TouchableOpacity
+            key={action.label}
+            style={styles.actionBtn}
+            onPress={() => router.push(action.route)}
+            activeOpacity={0.85}
+          >
+            <LinearGradient colors={[...action.colors]} style={styles.actionGrad}>
+              <Ionicons name={action.icon} size={24} color={palette.white} />
+            </LinearGradient>
+            <AppText variant="caption">{action.label}</AppText>
+          </TouchableOpacity>
+        ))}
+      </View>
 
       <FormModal
         visible={modalVisible}
-        title={editingTask ? 'Edit Task' : 'New Task'}
+        title={editingTask ? 'Edit task' : 'New task'}
         onClose={() => setModalVisible(false)}
         onSubmit={handleSave}
         loading={saving}
@@ -282,129 +284,101 @@ export default function DashboardScreen() {
           multiline
         />
       </FormModal>
-    </SafeAreaView>
+    </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f8fafc' },
-  scroll: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32 },
-  header: {
+  scroll: { paddingTop: 0, paddingHorizontal: 0, paddingBottom: spacing.xl },
+  hero: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xl,
+    borderBottomLeftRadius: radius.xxl,
+    borderBottomRightRadius: radius.xxl,
+    marginBottom: spacing.lg,
+  },
+  heroTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 24,
+    marginBottom: spacing.lg,
   },
-  greeting: { fontSize: 15, color: '#64748b', fontWeight: '500' },
-  name: { fontSize: 24, fontWeight: '800', color: '#0f172a', marginTop: 2 },
-  date: { fontSize: 13, color: '#94a3b8', marginTop: 2 },
+  heroText: { flex: 1, gap: 2 },
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#eef2ff',
+    backgroundColor: palette.white,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#6366f1',
+    ...shadows.md,
   },
-  avatarText: { fontSize: 15, fontWeight: '800', color: '#6366f1' },
-  progressCard: {
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 20,
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
+  progressInner: {
+    backgroundColor: palette.onPrimarySubtle,
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    gap: spacing.sm,
   },
-  progressLabel: { fontSize: 13, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
-  progressPct: { fontSize: 40, fontWeight: '800', color: '#fff', marginTop: 4 },
+  progressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   progressBarBg: {
-    height: 6,
+    height: 8,
     backgroundColor: 'rgba(255,255,255,0.25)',
-    borderRadius: 99,
-    marginTop: 12,
-    marginBottom: 8,
+    borderRadius: radius.full,
   },
-  progressBarFill: { height: 6, backgroundColor: '#fff', borderRadius: 99 },
-  progressSub: { fontSize: 13, color: 'rgba(255,255,255,0.75)' },
-  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 28 },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 14,
-    alignItems: 'center',
-    borderTopWidth: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statIcon: { fontSize: 20, marginBottom: 6 },
-  statNum: { fontSize: 20, fontWeight: '800', color: '#0f172a' },
-  statLabel: { fontSize: 11, color: '#64748b', fontWeight: '500', marginTop: 2 },
-  section: { marginBottom: 28 },
-  sectionHeader: {
+  progressBarFill: { height: 8, backgroundColor: palette.white, borderRadius: radius.full },
+  statsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 14,
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.lg,
   },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
-  seeAll: { fontSize: 13, fontWeight: '600', color: '#6366f1' },
+  statCard: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: spacing.md },
+  statIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCard: { marginHorizontal: spacing.lg, marginBottom: spacing.lg, alignItems: 'center' },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: palette.primaryLight,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    marginBottom: spacing.md,
+  },
   taskCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    padding: 14,
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 1,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    ...shadows.sm,
   },
-  taskDot: { width: 4, height: 40, borderRadius: 2, marginRight: 14 },
+  taskDot: { width: 4, height: 40, borderRadius: 2, marginRight: spacing.md },
   taskInfo: { flex: 1 },
-  taskTitle: { fontSize: 15, fontWeight: '600', color: '#0f172a' },
-  taskDone: { textDecorationLine: 'line-through', color: '#94a3b8' },
-  taskTime: { fontSize: 12, color: '#94a3b8', marginTop: 3 },
-  deleteBtn: { paddingHorizontal: 8 },
-  deleteText: { fontSize: 22, color: '#cbd5e1', fontWeight: '300' },
-  taskCheck: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    borderWidth: 2,
-    borderColor: '#e2e8f0',
-    alignItems: 'center',
-    justifyContent: 'center',
+  taskDone: { textDecorationLine: 'line-through', color: palette.textMuted },
+  deleteBtn: { paddingHorizontal: spacing.sm },
+  actionsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.xl,
   },
-  taskCheckMark: { color: '#fff', fontSize: 13, fontWeight: '700' },
-  actionsRow: { flexDirection: 'row', gap: 16, marginTop: 14 },
-  actionBtn: { flex: 1, alignItems: 'center', gap: 8 },
+  actionBtn: { flex: 1, alignItems: 'center', gap: spacing.sm },
   actionGrad: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
+    width: 56,
+    height: 56,
+    borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  actionEmoji: { fontSize: 28 },
-  actionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#334155',
-    textAlign: 'center',
-    lineHeight: 16,
+    ...shadows.md,
   },
 });

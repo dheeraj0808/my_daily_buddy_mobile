@@ -1,12 +1,8 @@
 import React from 'react';
-import {
-  View,
-  TextInput,
-  Text,
-  StyleSheet,
-  ViewStyle,
-} from 'react-native';
-import { Colors, BorderRadius, Spacing } from '../../constants/Colors';
+import { View, TextInput, StyleSheet, ViewStyle } from 'react-native';
+
+import AppText from '@/components/ui/AppText';
+import { palette, radius, spacing, typography } from '@/theme';
 
 interface InputProps {
   label?: string;
@@ -17,6 +13,10 @@ interface InputProps {
   keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
   error?: string;
   containerStyle?: ViewStyle;
+  multiline?: boolean;
+  autoFocus?: boolean;
+  onSubmitEditing?: () => void;
+  returnKeyType?: 'done' | 'next' | 'go';
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -28,64 +28,55 @@ export const Input: React.FC<InputProps> = ({
   keyboardType = 'default',
   error,
   containerStyle,
+  multiline,
+  autoFocus,
+  onSubmitEditing,
+  returnKeyType,
 }) => {
   return (
     <View style={[styles.container, containerStyle]}>
-      {label && <Text style={styles.label}>{label}</Text>}
+      {label ? <AppText variant="label" style={styles.label}>{label}</AppText> : null}
       <View style={[styles.inputContainer, error ? styles.inputError : null]}>
         <TextInput
           placeholder={placeholder}
-          placeholderTextColor={Colors.textSecondary}
+          placeholderTextColor={palette.textMuted}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
-          style={styles.input}
+          style={[styles.input, multiline && styles.multiline]}
           autoCapitalize="none"
+          multiline={multiline}
+          autoFocus={autoFocus}
+          onSubmitEditing={onSubmitEditing}
+          returnKeyType={returnKeyType}
         />
       </View>
-      {error && <Text style={styles.errorText}>{error}</Text>}
+      {error ? <AppText variant="caption" color={palette.error}>{error}</AppText> : null}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    width: '100%',
-    marginVertical: Spacing.sm,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: Spacing.xs,
-    marginLeft: 4,
-  },
+  container: { width: '100%', marginVertical: spacing.sm },
+  label: { marginBottom: spacing.xs, marginLeft: 4 },
   inputContainer: {
-    height: 56,
-    backgroundColor: Colors.white,
-    borderRadius: BorderRadius.lg,
-    paddingHorizontal: Spacing.md,
-    borderWidth: 1,
-    borderColor: Colors.border,
+    minHeight: 56,
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    borderWidth: 1.5,
+    borderColor: palette.border,
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
   },
   input: {
-    fontSize: 16,
-    color: Colors.text,
+    fontSize: typography.size.md,
+    fontFamily: typography.fontFamily.regular,
+    color: palette.text,
   },
+  multiline: { minHeight: 80, textAlignVertical: 'top', paddingVertical: spacing.sm },
   inputError: {
-    borderColor: Colors.error,
-  },
-  errorText: {
-    color: Colors.error,
-    fontSize: 12,
-    marginTop: 4,
-    marginLeft: 4,
+    borderColor: palette.error,
+    backgroundColor: '#FEF2F2',
   },
 });

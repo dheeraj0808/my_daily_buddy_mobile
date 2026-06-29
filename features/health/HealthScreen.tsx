@@ -1,12 +1,8 @@
-import { LinearGradient } from 'expo-linear-gradient';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useState } from 'react';
 import {
   Alert,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
-  Text,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -14,17 +10,23 @@ import {
 import ErrorBanner from '@/components/shared/ErrorBanner';
 import FormModal, { FormField } from '@/components/shared/FormModal';
 import LoadingState from '@/components/shared/LoadingState';
+import AppText from '@/components/ui/AppText';
+import Card from '@/components/ui/Card';
+import { SectionHeader } from '@/components/ui/FilterChips';
+import Screen from '@/components/ui/Screen';
+import ScreenHeader from '@/components/ui/ScreenHeader';
 import { useHealth } from '@/hooks/use-health';
 import { logFood, searchFood } from '@/services/foodAPI';
 import { logBodyMetric } from '@/services/healthAPI';
+import { palette, radius, shadows, spacing } from '@/theme';
 import { mlToGlasses } from '@/utils/timezone';
 import { getErrorMessage } from '@/utils/errors';
 
 const STEPS_GOAL = 10000;
 const HEALTH_TIPS = [
-  '💡 Walk 10 minutes after every meal.',
-  '💡 Sleep before 11 PM for better recovery.',
-  '💡 Deep breathing reduces stress by 40%.',
+  'Walk 10 minutes after every meal for better digestion.',
+  'Sleep before 11 PM for improved recovery.',
+  'Deep breathing for 5 minutes reduces daily stress.',
 ];
 
 export default function HealthScreen() {
@@ -40,7 +42,6 @@ export default function HealthScreen() {
   const [saving, setSaving] = useState(false);
 
   const steps = 6432;
-  const sleep = 7.5;
   const heartRate = 72;
   const stepsPct = Math.min(Math.round((steps / STEPS_GOAL) * 100), 100);
 
@@ -100,102 +101,85 @@ export default function HealthScreen() {
   const bmiCategory = health?.bmiCategory;
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor="#ef4444" />}
-      >
+    <>
+      <Screen refreshing={refreshing} onRefresh={refresh} refreshTint={palette.error} contentStyle={styles.scroll}>
         {error ? <ErrorBanner message={error} onRetry={reload} /> : null}
 
-        <LinearGradient colors={['#ef4444', '#dc2626']} style={styles.header}>
-          <Text style={styles.headerTitle}>Health Overview</Text>
-          <Text style={styles.headerSub}>Keep up the great work! 💪</Text>
-
-          <View style={styles.hrCard}>
+        <ScreenHeader
+          accent="health"
+          title="Health"
+          subtitle="Track nutrition, hydration & body metrics"
+          style={styles.header}
+        >
+          <Card padded style={styles.hrCard}>
             <View>
-              <Text style={styles.hrLabel}>Heart Rate</Text>
+              <AppText variant="caption" color={palette.textSecondary}>
+                Heart rate
+              </AppText>
               <View style={styles.hrRow}>
-                <Text style={styles.hrValue}>{heartRate}</Text>
-                <Text style={styles.hrUnit}> bpm</Text>
+                <AppText variant="display" style={styles.hrValue}>
+                  {heartRate}
+                </AppText>
+                <AppText variant="caption"> bpm</AppText>
               </View>
-              <Text style={styles.hrStatus}>● Sample data</Text>
+              <AppText variant="caption" color={palette.textMuted}>
+                Connect a wearable to sync live data
+              </AppText>
             </View>
-            <Text style={styles.hrEmoji}>❤️</Text>
-          </View>
-        </LinearGradient>
+            <Ionicons name="heart" size={40} color={palette.error} />
+          </Card>
+        </ScreenHeader>
 
         {health?.latest ? (
           <TouchableOpacity style={styles.bmiCard} onPress={() => setMetricModal(true)}>
-            <Text style={styles.bmiTitle}>⚖️ Body Metrics</Text>
-            <Text style={styles.bmiValue}>
-              {health.latest.weight_kg} kg
-              {bmi != null ? ` · BMI ${bmi}` : ''}
-            </Text>
-            {bmiCategory ? <Text style={styles.bmiCat}>{bmiCategory.replace('_', ' ')}</Text> : null}
-            <Text style={styles.bmiTap}>Tap to log new weight</Text>
+            <AppText variant="title">Body metrics</AppText>
+            <AppText variant="h2" color={palette.primaryLight}>
+              {health.latest.weight_kg} kg{bmi != null ? ` · BMI ${bmi}` : ''}
+            </AppText>
+            {bmiCategory ? <AppText variant="caption">{bmiCategory.replace('_', ' ')}</AppText> : null}
+            <AppText variant="caption" color={palette.textMuted}>Tap to log new weight</AppText>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity style={styles.bmiCard} onPress={() => setMetricModal(true)}>
-            <Text style={styles.bmiTitle}>⚖️ Body Metrics</Text>
-            <Text style={styles.bmiTap}>Tap to log weight & height</Text>
+            <AppText variant="title">Body metrics</AppText>
+            <AppText variant="caption" color={palette.textMuted}>Tap to log weight & height</AppText>
           </TouchableOpacity>
         )}
 
         <View style={styles.metricsRow}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricEmoji}>👟</Text>
-            <Text style={styles.metricValue}>{steps.toLocaleString()}</Text>
-            <Text style={styles.metricLabel}>Steps</Text>
+          <Card style={styles.metricCard}>
+            <Ionicons name="footsteps-outline" size={22} color={palette.primaryLight} />
+            <AppText variant="h2">{steps.toLocaleString()}</AppText>
+            <AppText variant="caption">Steps</AppText>
             <View style={styles.metricBarBg}>
-              <View style={[styles.metricBarFill, { width: `${stepsPct}%`, backgroundColor: '#6366f1' }]} />
+              <View style={[styles.metricBarFill, { width: `${stepsPct}%`, backgroundColor: palette.primaryLight }]} />
             </View>
-            <Text style={styles.metricGoal}>Sample · {stepsPct}% of {STEPS_GOAL.toLocaleString()}</Text>
-          </View>
+            <AppText variant="caption" color={palette.textMuted}>Wearable sync coming soon</AppText>
+          </Card>
 
           <TouchableOpacity style={styles.metricCard} onPress={() => setFoodModal(true)}>
-            <Text style={styles.metricEmoji}>🔥</Text>
-            <Text style={styles.metricValue}>{calories}</Text>
-            <Text style={styles.metricLabel}>Calories</Text>
+            <Ionicons name="flame-outline" size={22} color={palette.warning} />
+            <AppText variant="h2">{calories}</AppText>
+            <AppText variant="caption">Calories</AppText>
             <View style={styles.metricBarBg}>
-              <View style={[styles.metricBarFill, { width: `${caloriePct}%`, backgroundColor: '#f59e0b' }]} />
+              <View style={[styles.metricBarFill, { width: `${caloriePct}%`, backgroundColor: palette.warning }]} />
             </View>
-            <Text style={styles.metricGoal}>{caloriePct}% of {calorieGoal} kcal</Text>
+            <AppText variant="caption" color={palette.textMuted}>{caloriePct}% of {calorieGoal} kcal</AppText>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.sleepCard}>
-          <View style={styles.sleepLeft}>
-            <Text style={styles.sleepEmoji}>😴</Text>
-            <View>
-              <Text style={styles.sleepLabel}>Sleep Last Night</Text>
-              <View style={styles.sleepValueRow}>
-                <Text style={styles.sleepValue}>{sleep}</Text>
-                <Text style={styles.sleepUnit}> hrs</Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.sleepRight}>
-            <View style={styles.sleepBadge}>
-              <Text style={styles.sleepBadgeText}>Sample</Text>
-            </View>
-            <Text style={styles.sleepSub}>Recommended: 7–9 hrs</Text>
-          </View>
-        </View>
-
-        <View style={styles.waterCard}>
+        <Card style={styles.waterCard}>
           <View style={styles.waterHeader}>
             <View>
-              <Text style={styles.waterTitle}>💧 Water Intake</Text>
-              <Text style={styles.waterSub}>
+              <AppText variant="title">Water intake</AppText>
+              <AppText variant="caption">
                 {waterGlasses} of {waterGoalGlasses} glasses · {waterPct}%
-              </Text>
+              </AppText>
             </View>
             <TouchableOpacity style={styles.waterAddBtn} onPress={addGlass}>
-              <Text style={styles.waterAddText}>+ Glass</Text>
+              <AppText variant="label" color={palette.info}>+ Glass</AppText>
             </TouchableOpacity>
           </View>
-
           <View style={styles.glassesRow}>
             {Array.from({ length: waterGoalGlasses }).map((_, i) => (
               <TouchableOpacity
@@ -203,153 +187,77 @@ export default function HealthScreen() {
                 onPress={() => setGlasses(i + 1)}
                 style={[styles.glass, i < waterGlasses && styles.glassFull]}
               >
-                <Text style={styles.glassEmoji}>{i < waterGlasses ? '💧' : '○'}</Text>
+                <Ionicons
+                  name={i < waterGlasses ? 'water' : 'water-outline'}
+                  size={18}
+                  color={i < waterGlasses ? palette.info : palette.textMuted}
+                />
               </TouchableOpacity>
             ))}
           </View>
-
           <View style={styles.waterBarBg}>
             <View style={[styles.waterBarFill, { width: `${waterPct}%` }]} />
           </View>
-        </View>
+        </Card>
 
-        <Text style={styles.sectionTitle}>Daily Tips</Text>
+        <SectionHeader title="Daily tips" />
         {HEALTH_TIPS.map((tip, i) => (
           <View key={i} style={styles.tipCard}>
-            <Text style={styles.tipText}>{tip}</Text>
+            <AppText variant="body">{tip}</AppText>
           </View>
         ))}
-      </ScrollView>
+      </Screen>
 
-      <FormModal visible={foodModal} title="Log Food" onClose={() => setFoodModal(false)} onSubmit={handleLogFood} loading={saving}>
+      <FormModal visible={foodModal} title="Log food" onClose={() => setFoodModal(false)} onSubmit={handleLogFood} loading={saving}>
         <FormField label="Food name" value={foodQuery} onChangeText={setFoodQuery} placeholder="Search or enter name" />
         <FormField label="Calories (if custom)" value={customCalories} onChangeText={setCustomCalories} placeholder="250" />
       </FormModal>
 
-      <FormModal visible={metricModal} title="Log Body Metrics" onClose={() => setMetricModal(false)} onSubmit={handleLogMetric} loading={saving}>
+      <FormModal visible={metricModal} title="Log body metrics" onClose={() => setMetricModal(false)} onSubmit={handleLogMetric} loading={saving}>
         <FormField label="Weight (kg)" value={weight} onChangeText={setWeight} placeholder="70" />
         <FormField label="Height (cm, optional)" value={height} onChangeText={setHeight} placeholder="175" />
       </FormModal>
-    </SafeAreaView>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#f8fafc' },
-  scroll: { paddingBottom: 32 },
-  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24, marginBottom: 12 },
-  headerTitle: { fontSize: 26, fontWeight: '800', color: '#fff', marginBottom: 4 },
-  headerSub: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginBottom: 20 },
-  hrCard: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  hrLabel: { fontSize: 12, color: 'rgba(255,255,255,0.8)', fontWeight: '600', marginBottom: 4 },
+  scroll: { paddingBottom: spacing.xl },
+  header: { marginHorizontal: -spacing.lg, marginTop: -spacing.md },
+  hrCard: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: spacing.sm },
   hrRow: { flexDirection: 'row', alignItems: 'flex-end' },
-  hrValue: { fontSize: 36, fontWeight: '800', color: '#fff' },
-  hrUnit: { fontSize: 16, color: 'rgba(255,255,255,0.8)', marginBottom: 6 },
-  hrStatus: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
-  hrEmoji: { fontSize: 48, opacity: 0.9 },
+  hrValue: { fontSize: 36 },
   bmiCard: {
-    backgroundColor: '#fff',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    backgroundColor: palette.surface,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    ...shadows.sm,
   },
-  bmiTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 4 },
-  bmiValue: { fontSize: 18, fontWeight: '800', color: '#6366f1' },
-  bmiCat: { fontSize: 13, color: '#64748b', marginTop: 4 },
-  bmiTap: { fontSize: 12, color: '#94a3b8', marginTop: 8 },
-  metricsRow: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 16 },
+  metricsRow: { flexDirection: 'row', gap: spacing.sm, paddingHorizontal: spacing.lg, marginBottom: spacing.md },
   metricCard: {
     flex: 1,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+    gap: 4,
   },
-  metricEmoji: { fontSize: 24, marginBottom: 8 },
-  metricValue: { fontSize: 24, fontWeight: '800', color: '#0f172a' },
-  metricLabel: { fontSize: 12, color: '#64748b', marginTop: 2, marginBottom: 10 },
-  metricBarBg: { height: 5, backgroundColor: '#f1f5f9', borderRadius: 99, marginBottom: 6 },
-  metricBarFill: { height: 5, borderRadius: 99 },
-  metricGoal: { fontSize: 11, color: '#94a3b8' },
-  sleepCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    padding: 18,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  sleepLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  sleepEmoji: { fontSize: 32 },
-  sleepLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
-  sleepValueRow: { flexDirection: 'row', alignItems: 'flex-end' },
-  sleepValue: { fontSize: 28, fontWeight: '800', color: '#0f172a' },
-  sleepUnit: { fontSize: 14, color: '#64748b', marginBottom: 5 },
-  sleepRight: { alignItems: 'flex-end', gap: 6 },
-  sleepBadge: { backgroundColor: '#f1f5f9', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 },
-  sleepBadgeText: { fontSize: 13, fontWeight: '700', color: '#64748b' },
-  sleepSub: { fontSize: 11, color: '#94a3b8' },
-  waterCard: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    marginHorizontal: 20,
-    padding: 18,
-    marginBottom: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  waterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 },
-  waterTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 4 },
-  waterSub: { fontSize: 13, color: '#64748b' },
-  waterAddBtn: { backgroundColor: '#eff6ff', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 6 },
-  waterAddText: { fontSize: 13, fontWeight: '700', color: '#0ea5e9' },
-  glassesRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 4 },
-  glass: { width: 36, height: 36, borderRadius: 10, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
-  glassFull: { backgroundColor: '#eff6ff' },
-  glassEmoji: { fontSize: 18 },
-  waterBarBg: { height: 6, backgroundColor: '#f1f5f9', borderRadius: 99 },
-  waterBarFill: { height: 6, backgroundColor: '#0ea5e9', borderRadius: 99 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a', paddingHorizontal: 20, marginBottom: 12 },
+  metricBarBg: { height: 5, backgroundColor: palette.surfaceMuted, borderRadius: radius.full, marginVertical: 6 },
+  metricBarFill: { height: 5, borderRadius: radius.full },
+  waterCard: { marginHorizontal: spacing.lg, marginBottom: spacing.lg, gap: spacing.md },
+  waterHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  waterAddBtn: { backgroundColor: '#EFF6FF', borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 6 },
+  glassesRow: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', gap: 4 },
+  glass: { width: 36, height: 36, borderRadius: radius.sm, backgroundColor: palette.surfaceMuted, alignItems: 'center', justifyContent: 'center' },
+  glassFull: { backgroundColor: '#EFF6FF' },
+  waterBarBg: { height: 6, backgroundColor: palette.surfaceMuted, borderRadius: radius.full },
+  waterBarFill: { height: 6, backgroundColor: palette.info, borderRadius: radius.full },
   tipCard: {
-    backgroundColor: '#fff',
-    borderRadius: 14,
-    marginHorizontal: 20,
-    marginBottom: 10,
-    padding: 14,
+    backgroundColor: palette.surface,
+    borderRadius: radius.lg,
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
     borderLeftWidth: 4,
-    borderLeftColor: '#ef4444',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
+    borderLeftColor: palette.error,
+    ...shadows.sm,
   },
-  tipText: { fontSize: 14, color: '#334155', lineHeight: 20 },
 });

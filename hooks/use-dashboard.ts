@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { getActiveReminders } from '@/services/reminderAPI';
 import { getHabitStreak, listHabits } from '@/services/habitAPI';
 import { getTodayTasks, type Task } from '@/services/taskAPI';
-import { getErrorMessage } from '@/utils/errors';
+import { getErrorMessage, isAuthError } from '@/utils/errors';
 
 export function useDashboard() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -40,7 +40,9 @@ export function useDashboard() {
       );
       setStats((s) => ({ ...s, habitStreak: maxStreak }));
     } catch (err) {
-      setError(getErrorMessage(err));
+      if (!isAuthError(err)) {
+        setError(getErrorMessage(err));
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);

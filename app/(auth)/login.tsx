@@ -1,18 +1,21 @@
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   SafeAreaView,
   StyleSheet,
-  Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { authService } from '../../services/authService';
+
+import { authService } from '@/services/authService';
+import AppText from '@/components/ui/AppText';
+import BrandHeader from '@/components/ui/BrandHeader';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { palette, spacing } from '@/theme';
+import { getErrorMessage } from '@/utils/errors';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -40,13 +43,13 @@ export default function LoginScreen() {
         pathname: '/(auth)/verify-otp',
         params: { userId, email: trimmed, source: 'login' },
       });
-    } catch (err: any) {
-      if (err?.response?.status === 404) {
+    } catch (err: unknown) {
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
         setNotRegistered(true);
-        setError('User not found , pleaser create an account first');
+        setError('No account found. Please create one first.');
       } else {
-        const msg = err?.response?.data?.message;
-        setError(Array.isArray(msg) ? msg[0] : (msg || 'Failed to send OTP. Please try again.'));
+        setError(getErrorMessage(err, 'Failed to send OTP. Please try again.'));
       }
     } finally {
       setLoading(false);
@@ -60,67 +63,45 @@ export default function LoginScreen() {
         style={styles.flex}
       >
         <View style={styles.content}>
-          {/* Brand */}
-          <View style={styles.brand}>
-            <View style={styles.logoCircle}>
-              <Text style={styles.logoText}>DA</Text>
-            </View>
-            <Text style={styles.appName}>Daily Life Assistant</Text>
-            <Text style={styles.tagline}>Manage your routine and habits easily</Text>
-          </View>
+          <BrandHeader subtitle="Sign in to continue your daily routine" />
 
-          {/* Form */}
           <View style={styles.form}>
-            <Text style={styles.label}>Email Address</Text>
-            <TextInput
-              style={[styles.input, error ? styles.inputError : null]}
+            <Input
+              label="Email address"
               placeholder="you@example.com"
-              placeholderTextColor="#94a3b8"
               value={email}
-              onChangeText={(t) => { setEmail(t); setError(''); }}
+              onChangeText={(t) => {
+                setEmail(t);
+                setError('');
+              }}
               keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
+              error={error}
               autoFocus
               returnKeyType="done"
               onSubmitEditing={handleSendOTP}
             />
-            {error ? (
-              <View style={styles.errorBox}>
-                <Text style={styles.errorText}>{error}</Text>
-                {notRegistered && (
-                  <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-                    <Text style={styles.errorSignUpLink}>Create an account →</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
+            {notRegistered ? (
+              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
+                <AppText variant="label" color={palette.primaryLight}>
+                  Create an account →
+                </AppText>
+              </TouchableOpacity>
             ) : null}
 
-            <TouchableOpacity
-              activeOpacity={0.85}
+            <Button
+              title="Send OTP"
               onPress={handleSendOTP}
+              loading={loading}
               disabled={!isReady}
-              style={styles.btnWrapper}
-            >
-              <LinearGradient
-                colors={isReady ? ['#6366f1', '#4f46e5'] : ['#e2e8f0', '#cbd5e1']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.button}
-              >
-                {loading
-                  ? <ActivityIndicator color="#fff" />
-                  : <Text style={[styles.btnText, !isReady && styles.btnTextDisabled]}>Send OTP</Text>
-                }
-              </LinearGradient>
-            </TouchableOpacity>
+            />
           </View>
 
-          {/* Footer */}
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account?</Text>
+            <AppText variant="body">Don&apos;t have an account?</AppText>
             <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-              <Text style={styles.footerLink}> Sign Up</Text>
+              <AppText variant="label" color={palette.primaryLight}>
+                Sign up
+              </AppText>
             </TouchableOpacity>
           </View>
         </View>
@@ -130,124 +111,19 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#ffffff',
-  },
-  flex: {
-    flex: 1,
-  },
+  container: { flex: 1, backgroundColor: palette.surface },
+  flex: { flex: 1 },
   content: {
     flex: 1,
-    paddingHorizontal: 24,
+    paddingHorizontal: spacing.lg,
     justifyContent: 'center',
-    gap: 40,
+    gap: spacing.xl,
   },
-  // Brand section
-  brand: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  logoCircle: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#eef2ff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  logoText: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#6366f1',
-    letterSpacing: 1,
-  },
-  appName: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: '#0f172a',
-    letterSpacing: -0.5,
-    textAlign: 'center',
-  },
-  tagline: {
-    fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  // Form
-  form: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#334155',
-    marginBottom: 4,
-  },
-  input: {
-    height: 54,
-    backgroundColor: '#f8fafc',
-    borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#0f172a',
-  },
-  inputError: {
-    borderColor: '#ef4444',
-    backgroundColor: '#fff5f5',
-  },
-  errorBox: {
-    marginTop: 6,
-    gap: 4,
-  },
-  errorText: {
-    fontSize: 13,
-    color: '#ef4444',
-  },
-  errorSignUpLink: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#6366f1',
-  },
-  btnWrapper: {
-    marginTop: 20,
-  },
-  button: {
-    height: 56,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#6366f1',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  btnText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#ffffff',
-  },
-  btnTextDisabled: {
-    color: '#94a3b8',
-  },
-  // Footer
+  form: { gap: spacing.xs },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#64748b',
-  },
-  footerLink: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#6366f1',
+    gap: spacing.xs,
   },
 });

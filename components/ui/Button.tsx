@@ -1,14 +1,15 @@
 import React from 'react';
 import {
   TouchableOpacity,
-  Text,
   StyleSheet,
   ActivityIndicator,
   ViewStyle,
   TextStyle,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, BorderRadius, Spacing } from '../../constants/Colors';
+
+import AppText from '@/components/ui/AppText';
+import { gradients, palette, radius, spacing } from '@/theme';
 
 interface ButtonProps {
   title: string;
@@ -37,32 +38,35 @@ export const Button: React.FC<ButtonProps> = ({
         onPress={onPress}
         disabled={isDisabled}
         style={[styles.base, styles.outline, isDisabled && styles.disabled, style]}
+        activeOpacity={0.85}
       >
         {loading ? (
-          <ActivityIndicator color={Colors.primary} />
+          <ActivityIndicator color={palette.primaryLight} />
         ) : (
-          <Text style={[styles.text, styles.textOutline, textStyle]}>{title}</Text>
+          <AppText variant="title" color={palette.primaryLight} style={textStyle}>
+            {title}
+          </AppText>
         )}
       </TouchableOpacity>
     );
   }
+
+  const colors = variant === 'primary' ? gradients.auth : (['#94A3B8', '#64748B'] as const);
 
   return (
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
       style={[styles.base, isDisabled && styles.disabled, style]}
+      activeOpacity={0.85}
     >
-      <LinearGradient
-        colors={variant === 'primary' ? [...Colors.gradient] : ['#94a3b8', '#64748b']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.gradient}
-      >
+      <LinearGradient colors={[...colors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.gradient}>
         {loading ? (
-          <ActivityIndicator color={Colors.white} />
+          <ActivityIndicator color={palette.white} />
         ) : (
-          <Text style={[styles.text, textStyle]}>{title}</Text>
+          <AppText variant="title" color={palette.white} style={textStyle}>
+            {title}
+          </AppText>
         )}
       </LinearGradient>
     </TouchableOpacity>
@@ -72,12 +76,12 @@ export const Button: React.FC<ButtonProps> = ({
 const styles = StyleSheet.create({
   base: {
     height: 56,
-    borderRadius: BorderRadius.lg,
+    borderRadius: radius.lg,
     overflow: 'hidden',
     justifyContent: 'center',
     alignItems: 'center',
     width: '100%',
-    marginVertical: Spacing.sm,
+    marginVertical: spacing.sm,
   },
   gradient: {
     flex: 1,
@@ -87,18 +91,8 @@ const styles = StyleSheet.create({
   },
   outline: {
     borderWidth: 2,
-    borderColor: Colors.primary,
+    borderColor: palette.primaryLight,
     backgroundColor: 'transparent',
   },
-  disabled: {
-    opacity: 0.6,
-  },
-  text: {
-    color: Colors.white,
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  textOutline: {
-    color: Colors.primary,
-  },
+  disabled: { opacity: 0.55 },
 });

@@ -5,11 +5,13 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+
+import AppText from '@/components/ui/AppText';
+import { palette, radius, spacing, typography } from '@/theme';
 
 interface Props {
   visible: boolean;
@@ -34,22 +36,30 @@ export default function FormModal({
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <Pressable style={styles.backdrop} onPress={onClose}>
         <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+          <View style={styles.handle} />
           <View style={styles.header}>
-            <Text style={styles.title}>{title}</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Text style={styles.close}>✕</Text>
+            <AppText variant="h2">{title}</AppText>
+            <TouchableOpacity onPress={onClose} hitSlop={12}>
+              <AppText variant="h2" color={palette.textMuted}>
+                ×
+              </AppText>
             </TouchableOpacity>
           </View>
-          <ScrollView keyboardShouldPersistTaps="handled">{children}</ScrollView>
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            {children}
+          </ScrollView>
           <TouchableOpacity
             style={[styles.submit, loading && styles.submitDisabled]}
             onPress={onSubmit}
             disabled={loading}
+            activeOpacity={0.85}
           >
             {loading ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={palette.white} />
             ) : (
-              <Text style={styles.submitText}>{submitLabel}</Text>
+              <AppText variant="title" color={palette.white}>
+                {submitLabel}
+              </AppText>
             )}
           </TouchableOpacity>
         </Pressable>
@@ -73,13 +83,15 @@ export function FormField({
 }) {
   return (
     <View style={fieldStyles.wrap}>
-      <Text style={fieldStyles.label}>{label}</Text>
+      <AppText variant="label" style={fieldStyles.label}>
+        {label}
+      </AppText>
       <TextInput
         style={[fieldStyles.input, multiline && fieldStyles.multiline]}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#94a3b8"
+        placeholderTextColor={palette.textMuted}
         multiline={multiline}
       />
     </View>
@@ -87,48 +99,54 @@ export function FormField({
 }
 
 const fieldStyles = StyleSheet.create({
-  wrap: { marginBottom: 16 },
-  label: { fontSize: 13, fontWeight: '600', color: '#64748b', marginBottom: 6 },
+  wrap: { marginBottom: spacing.md },
+  label: { marginBottom: 6 },
   input: {
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 15,
-    color: '#0f172a',
-    backgroundColor: '#f8fafc',
+    borderColor: palette.border,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontSize: typography.size.md,
+    fontFamily: typography.fontFamily.regular,
+    color: palette.text,
+    backgroundColor: palette.background,
   },
-  multiline: { minHeight: 80, textAlignVertical: 'top' },
+  multiline: { minHeight: 88, textAlignVertical: 'top' },
 });
 
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: palette.overlay,
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    maxHeight: '85%',
+    backgroundColor: palette.surface,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.lg,
+    maxHeight: '88%',
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: palette.border,
+    alignSelf: 'center',
+    marginBottom: spacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: spacing.md,
   },
-  title: { fontSize: 18, fontWeight: '800', color: '#0f172a' },
-  close: { fontSize: 20, color: '#64748b', padding: 4 },
   submit: {
-    backgroundColor: '#6366f1',
-    borderRadius: 14,
-    padding: 16,
+    backgroundColor: palette.primaryLight,
+    borderRadius: radius.lg,
+    padding: spacing.md,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   submitDisabled: { opacity: 0.6 },
-  submitText: { color: '#fff', fontWeight: '700', fontSize: 16 },
 });

@@ -1,4 +1,4 @@
-import api from './api';
+import api, { AUTH_TIMEOUT_MS } from './api';
 
 /**
  * Matches the backend RegisterDto exactly:
@@ -18,7 +18,7 @@ export const authService = {
    * Sends an OTP to the provided email.
    */
   register: async (data: RegisterData) => {
-    const response = await api.post('/auth/register', data);
+    const response = await api.post('/auth/register', data, { timeout: AUTH_TIMEOUT_MS });
     return response.data;
   },
 
@@ -28,7 +28,7 @@ export const authService = {
    * Sends an OTP to the email (auto-creates user if not found).
    */
   login: async (email: string) => {
-    const response = await api.post('/auth/login', { email });
+    const response = await api.post('/auth/login', { email }, { timeout: AUTH_TIMEOUT_MS });
     return response.data;
   },
 
@@ -47,7 +47,7 @@ export const authService = {
    * POST /api/auth/resend-otp
    */
   resendOtp: async (userId: string) => {
-    const response = await api.post('/auth/resend-otp', { userId });
+    const response = await api.post('/auth/resend-otp', { userId }, { timeout: AUTH_TIMEOUT_MS });
     return response.data;
   },
 
