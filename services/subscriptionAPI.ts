@@ -30,7 +30,7 @@ export async function getMySubscription(): Promise<UserSubscription | null> {
 }
 
 export async function getAllPlans(): Promise<Plan[]> {
-  const response = await api.get<{ data: Plan[] }>('/admin/plans');
+  const response = await api.get<{ data: Plan[] }>('/subscriptions/plans');
   return response.data.data;
 }
 

@@ -14,6 +14,7 @@ export interface UserProfile {
   isVerified: boolean;
   isActive: boolean;
   subscription_id: string | null;
+  profile_image_url: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -22,6 +23,7 @@ export interface UpdateProfilePayload {
   first_name?: string;
   last_name?: string;
   phone?: string;
+  profile_image_url?: string | null;
 }
 
 export async function getProfile(): Promise<UserProfile> {

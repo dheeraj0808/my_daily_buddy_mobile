@@ -89,11 +89,15 @@ export default function ProfileScreen() {
       setEditFirstName(p.first_name ?? '');
       setEditLastName(p.last_name ?? '');
       setEditPhone(p.phone ?? '');
+      setAvatarUri(p.profile_image_url ?? (avatarRes.status === 'fulfilled' ? avatarRes.value : null));
     }
 
     setSubscription(subRes.status === 'fulfilled' ? subRes.value : null);
     setPlans(plansRes.status === 'fulfilled' ? plansRes.value : []);
-    setAvatarUri(avatarRes.status === 'fulfilled' ? avatarRes.value : null);
+
+    if (profileRes.status === 'rejected') {
+      setAvatarUri(avatarRes.status === 'fulfilled' ? avatarRes.value : null);
+    }
 
     setLoading(false);
     setRefreshing(false);
@@ -146,6 +150,7 @@ export default function ProfileScreen() {
     setUploadingImage(true);
     try {
       const remoteUrl = await uploadProfileImage(localUri);
+      await updateProfile({ profile_image_url: remoteUrl });
       await saveProfileImageUri(remoteUrl);
       setAvatarUri(remoteUrl);
     } catch {
