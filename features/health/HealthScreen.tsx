@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     StyleSheet,
@@ -16,8 +16,10 @@ import { SectionHeader } from '@/components/ui/FilterChips';
 import Screen from '@/components/ui/Screen';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import { useHealth } from '@/hooks/use-health';
-import { logFood, searchFood } from '@/services/foodAPI';
+import { getFoodGoal, logFood, searchFood, updateFoodGoal } from '@/services/foodAPI';
 import { logBodyMetric } from '@/services/healthAPI';
+import { getWeeklyWater, updateWaterGoal } from '@/services/waterAPI';
+import type { WeeklyWaterSummary } from '@/services/waterAPI';
 import { palette, radius, shadows, spacing } from '@/theme';
 import { getErrorMessage } from '@/utils/errors';
 import { mlToGlasses } from '@/utils/timezone';
@@ -32,13 +34,23 @@ export default function HealthScreen() {
   const { water, food, health, loading, refreshing, error, refresh, reload, addGlass, setGlasses } =
     useHealth();
 
+  const [weekly, setWeekly] = useState<WeeklyWaterSummary | null>(null);
   const [foodModal, setFoodModal] = useState(false);
   const [metricModal, setMetricModal] = useState(false);
+  const [goalModal, setGoalModal] = useState(false);
   const [foodQuery, setFoodQuery] = useState('');
   const [customCalories, setCustomCalories] = useState('');
   const [weight, setWeight] = useState('');
   const [height, setHeight] = useState('');
+  const [waterGoalInput, setWaterGoalInput] = useState('');
+  const [calorieGoalInput, setCalorieGoalInput] = useState('');
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getWeeklyWater()
+      .then(setWeekly)
+      .catch(() => setWeekly(null));
+  }, [water?.totalMl]);
 
   const waterGlasses = water ? mlToGlasses(water.totalMl) : 0;
   const waterGoalGlasses = water ? Math.max(1, mlToGlasses(water.goalMl)) : 8;
@@ -47,6 +59,39 @@ export default function HealthScreen() {
   const calories = food ? Math.round(food.calories) : 0;
   const calorieGoal = food?.goalKcal ?? 2500;
   const caloriePct = food ? Math.min(food.percentComplete, 100) : 0;
+
+  const maxWeeklyMl = weekly?.days.length
+    ? Math.max(...weekly.days.map((d) => d.totalMl), 1)
+    : 1;
+
+  const openGoalModal = async () => {
+    setWaterGoalInput(String(water?.goalMl ?? 2000));
+    try {
+      const fg = await getFoodGoal();
+      setCalorieGoalInput(String(fg.goalKcal));
+    } catch {
+      setCalorieGoalInput(String(calorieGoal));
+    }
+    setGoalModal(true);
+  };
+
+  const handleSaveGoals = async () => {
+    setSaving(true);
+    try {
+      const waterMl = Number(waterGoalInput);
+      const kcal = Number(calorieGoalInput);
+      if (waterMl >= 250) await updateWaterGoal(waterMl);
+      if (kcal >= 500) await updateFoodGoal(kcal);
+      setGoalModal(false);
+      await refresh();
+      const w = await getWeeklyWater();
+      setWeekly(w);
+    } catch (err) {
+      Alert.alert('Error', getErrorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleLogFood = async () => {
     setSaving(true);
@@ -99,13 +144,22 @@ export default function HealthScreen() {
     <>
       <Screen
         refreshing={refreshing}
-        onRefresh={refresh}
+        onRefresh={async () => {
+          await refresh();
+          try {
+            setWeekly(await getWeeklyWater());
+          } catch {
+            // ignore
+          }
+        }}
         refreshTint={palette.error}
         header={
           <ScreenHeader
             accent="health"
             title="Health"
             subtitle="Track nutrition, hydration & body metrics"
+            onAdd={openGoalModal}
+            addLabel="Goals"
           >
             <Card padded style={styles.hrCard}>
               <View>
@@ -200,6 +254,31 @@ export default function HealthScreen() {
           </View>
         </Card>
 
+        {weekly ? (
+          <>
+            <SectionHeader title="Water — last 7 days" />
+            <Card style={styles.weeklyCard}>
+              <View style={styles.weeklyMeta}>
+                <AppText variant="caption">{weekly.weeklyTotalMl} ml total</AppText>
+                <AppText variant="caption">{weekly.daysGoalMet}/7 days on goal</AppText>
+              </View>
+              <View style={styles.chartRow}>
+                {weekly.days.map((day) => {
+                  const h = Math.max(8, Math.round((day.totalMl / maxWeeklyMl) * 72));
+                  return (
+                    <View key={day.date} style={styles.chartCol}>
+                      <View style={[styles.chartBar, { height: h, backgroundColor: day.goalMet ? palette.info : palette.surfaceMuted }]} />
+                      <AppText variant="caption" color={palette.textMuted}>
+                        {day.date.slice(5)}
+                      </AppText>
+                    </View>
+                  );
+                })}
+              </View>
+            </Card>
+          </>
+        ) : null}
+
         <SectionHeader title="Daily tips" />
         {HEALTH_TIPS.map((tip, i) => (
           <View key={i} style={styles.tipCard}>
@@ -216,6 +295,11 @@ export default function HealthScreen() {
       <FormModal visible={metricModal} title="Log body metrics" onClose={() => setMetricModal(false)} onSubmit={handleLogMetric} loading={saving}>
         <FormField label="Weight (kg)" value={weight} onChangeText={setWeight} placeholder="70" />
         <FormField label="Height (cm, optional)" value={height} onChangeText={setHeight} placeholder="175" />
+      </FormModal>
+
+      <FormModal visible={goalModal} title="Daily goals" onClose={() => setGoalModal(false)} onSubmit={handleSaveGoals} loading={saving}>
+        <FormField label="Water goal (ml)" value={waterGoalInput} onChangeText={setWaterGoalInput} placeholder="2000" />
+        <FormField label="Calorie goal (kcal)" value={calorieGoalInput} onChangeText={setCalorieGoalInput} placeholder="2500" />
       </FormModal>
     </>
   );
@@ -247,6 +331,11 @@ const styles = StyleSheet.create({
   glassFull: { backgroundColor: '#EFF6FF' },
   waterBarBg: { height: 6, backgroundColor: palette.surfaceMuted, borderRadius: radius.full },
   waterBarFill: { height: 6, backgroundColor: palette.info, borderRadius: radius.full },
+  weeklyCard: { marginBottom: spacing.lg, gap: spacing.sm },
+  weeklyMeta: { flexDirection: 'row', justifyContent: 'space-between' },
+  chartRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', minHeight: 90 },
+  chartCol: { alignItems: 'center', gap: 4, flex: 1 },
+  chartBar: { width: 18, borderRadius: radius.sm },
   tipCard: {
     backgroundColor: palette.surface,
     borderRadius: radius.lg,

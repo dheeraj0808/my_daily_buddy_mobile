@@ -6,21 +6,26 @@ import LoadingState from '@/components/shared/LoadingState';
 import FilterChips from '@/components/ui/FilterChips';
 import Screen from '@/components/ui/Screen';
 import ScreenHeader from '@/components/ui/ScreenHeader';
+import CatchUpPanel from '@/features/catchup/CatchUpPanel';
 import GoalsPanel from '@/features/goals/GoalsPanel';
 import HabitsPanel from '@/features/habits/HabitsPanel';
 import { useGoals } from '@/hooks/use-goals';
 import { useHabits } from '@/hooks/use-habits';
 import { palette } from '@/theme';
 
-const SEGMENTS = ['Habits', 'Goals'] as const;
+const SEGMENTS = ['Habits', 'Goals', 'Recovery'] as const;
 type Segment = (typeof SEGMENTS)[number];
 
-function segmentToKey(segment: Segment): 'habits' | 'goals' {
-  return segment === 'Habits' ? 'habits' : 'goals';
+function segmentToKey(segment: Segment): 'habits' | 'goals' | 'recovery' {
+  if (segment === 'Goals') return 'goals';
+  if (segment === 'Recovery') return 'recovery';
+  return 'habits';
 }
 
 function keyToSegment(key: string | undefined): Segment {
-  return key === 'goals' ? 'Goals' : 'Habits';
+  if (key === 'goals') return 'Goals';
+  if (key === 'recovery' || key === 'catchup') return 'Recovery';
+  return 'Habits';
 }
 
 export default function TrackScreen() {
@@ -44,7 +49,9 @@ export default function TrackScreen() {
 
   const activeKey = segmentToKey(segment);
   const isHabits = activeKey === 'habits';
-  const activeState = isHabits ? habitsState : goalsState;
+  const isGoals = activeKey === 'goals';
+  const isRecovery = activeKey === 'recovery';
+  const activeState = isHabits ? habitsState : isGoals ? goalsState : null;
 
   useEffect(() => {
     if (segmentParam) {
@@ -53,6 +60,7 @@ export default function TrackScreen() {
   }, [segmentParam]);
 
   useEffect(() => {
+    if (isRecovery) return;
     if (isHabits) {
       const completed = habitsState.habits.filter((h) => h.completedToday).length;
       setSubtitle(`${completed} of ${habitsState.habits.length} habits done today`);
@@ -61,45 +69,47 @@ export default function TrackScreen() {
         `${goalsState.stats?.total ?? goalsState.goals.length} goals · ${Math.round(goalsState.stats?.completionRate ?? 0)}% completion`
       );
     }
-  }, [segment, isHabits, habitsState.habits, goalsState.goals, goalsState.stats]);
+  }, [segment, isHabits, isRecovery, habitsState.habits, goalsState.goals, goalsState.stats]);
 
   const handleAdd = () => {
     if (isHabits) openHabitsAdd.current();
-    else openGoalsAdd.current();
+    else if (isGoals) openGoalsAdd.current();
   };
 
-  if (activeState.loading && !activeState.refreshing) {
+  if (activeState?.loading && !activeState.refreshing) {
     return <LoadingState />;
   }
 
   return (
     <Screen
-      refreshing={activeState.refreshing}
-      onRefresh={activeState.refresh}
-      refreshTint={isHabits ? palette.success : palette.secondary}
+      refreshing={activeState?.refreshing ?? false}
+      onRefresh={activeState?.refresh}
+      refreshTint={isHabits ? palette.success : isGoals ? palette.secondary : palette.primaryLight}
       header={
         <ScreenHeader
           accent="track"
           title="Track"
           subtitle={subtitle}
-          onAdd={handleAdd}
+          onAdd={isRecovery ? undefined : handleAdd}
           addLabel="+ Add"
         />
       }
     >
       <View style={styles.segmentWrap}>
         <FilterChips
-          options={SEGMENTS}
+          options={[...SEGMENTS]}
           value={segment}
           onChange={setSegment}
-          accent={isHabits ? palette.success : palette.secondary}
+          accent={isHabits ? palette.success : isGoals ? palette.secondary : palette.primaryLight}
         />
       </View>
 
       {isHabits ? (
         <HabitsPanel state={habitsState} onAddReady={registerHabitsAdd} />
-      ) : (
+      ) : isGoals ? (
         <GoalsPanel state={goalsState} onAddReady={registerGoalsAdd} />
+      ) : (
+        <CatchUpPanel onSubtitleChange={setSubtitle} />
       )}
     </Screen>
   );

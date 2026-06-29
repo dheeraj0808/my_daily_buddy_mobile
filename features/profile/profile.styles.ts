@@ -528,6 +528,25 @@ export default StyleSheet.create({
     marginTop: Spacing.sm,
   },
 
+  accountRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  accountRowLast: {
+    borderBottomWidth: 0,
+  },
+  accountRowText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '500',
+    color: Colors.text,
+  },
+
   // ── Logout ────────────────────────────────────────────────────────────────
   logoutBtn: {
     flexDirection: 'row',

@@ -43,3 +43,30 @@ export async function deleteWaterLog(id: string): Promise<TodayWaterSummary> {
   await api.delete(`/water/log/${id}`);
   return getTodayWater();
 }
+
+export interface WeeklyWaterDay {
+  date: string;
+  totalMl: number;
+  goalMet: boolean;
+  logCount: number;
+}
+
+export interface WeeklyWaterSummary {
+  startDate: string;
+  endDate: string;
+  goalMl: number;
+  days: WeeklyWaterDay[];
+  weeklyTotalMl: number;
+  averageDailyMl: number;
+  daysGoalMet: number;
+}
+
+export async function getWeeklyWater(): Promise<WeeklyWaterSummary> {
+  const response = await api.get('/water/weekly', { params: { tz: getDeviceTimezone() } });
+  return unwrapData<WeeklyWaterSummary>(response);
+}
+
+export async function getWaterGoal(): Promise<{ goalMl: number }> {
+  const response = await api.get('/water/goal');
+  return unwrapData(response);
+}

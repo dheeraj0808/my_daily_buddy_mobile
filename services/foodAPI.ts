@@ -64,3 +64,13 @@ export async function logFood(payload: {
   const result = unwrapData<{ daily: DailyFoodSummary }>(response);
   return result.daily;
 }
+
+export async function getFoodGoal(): Promise<{ goalKcal: number }> {
+  const response = await api.get('/food/goal');
+  return unwrapData(response);
+}
+
+export async function updateFoodGoal(goalKcal: number): Promise<{ goalKcal: number }> {
+  const response = await api.put('/food/goal', { goalKcal });
+  return unwrapData(response);
+}

@@ -66,3 +66,23 @@ export async function loadProfileImageUri(): Promise<string | null> {
   }
   return SecureStore.getItemAsync(PROFILE_IMAGE_KEY);
 }
+
+export async function deleteAccount(): Promise<void> {
+  await api.delete('/users/profile');
+}
+
+export async function initiateEmailChange(): Promise<void> {
+  await api.post('/users/email/initiate');
+}
+
+export async function verifyCurrentEmail(otp: string): Promise<void> {
+  await api.post('/users/email/verify-current', { otp });
+}
+
+export async function requestNewEmail(newEmail: string): Promise<void> {
+  await api.post('/users/email/request-new', { newEmail });
+}
+
+export async function verifyNewEmail(otp: string): Promise<void> {
+  await api.post('/users/email/verify-new', { otp });
+}

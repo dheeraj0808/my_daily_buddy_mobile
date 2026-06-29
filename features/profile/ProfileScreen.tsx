@@ -19,11 +19,16 @@ import Screen from '@/components/ui/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UpdateProfilePayload, UserProfile } from '@/services/profileAPI';
 import {
+    deleteAccount,
     getProfile,
+    initiateEmailChange,
     loadProfileImageUri,
+    requestNewEmail,
     saveProfileImageUri,
     updateProfile,
     uploadProfileImage,
+    verifyCurrentEmail,
+    verifyNewEmail,
 } from '@/services/profileAPI';
 import type { Plan, UserSubscription } from '@/services/subscriptionAPI';
 import {
@@ -68,6 +73,13 @@ export default function ProfileScreen() {
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
   const [planChangeError, setPlanChangeError] = useState<string | null>(null);
+
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
+  const [emailStep, setEmailStep] = useState<1 | 2 | 3 | 4>(1);
+  const [emailOtp, setEmailOtp] = useState('');
+  const [newEmail, setNewEmail] = useState('');
+  const [emailBusy, setEmailBusy] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
 
   const loadData = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
@@ -244,6 +256,73 @@ export default function ProfileScreen() {
         },
       },
     ]);
+  };
+
+  const resetEmailFlow = () => {
+    setEmailStep(1);
+    setEmailOtp('');
+    setNewEmail('');
+    setEmailError(null);
+  };
+
+  const openEmailChange = () => {
+    resetEmailFlow();
+    setEmailModalVisible(true);
+  };
+
+  const handleEmailStep = async () => {
+    setEmailError(null);
+    setEmailBusy(true);
+    try {
+      if (emailStep === 1) {
+        await initiateEmailChange();
+        setEmailStep(2);
+      } else if (emailStep === 2) {
+        await verifyCurrentEmail(emailOtp.trim());
+        setEmailOtp('');
+        setEmailStep(3);
+      } else if (emailStep === 3) {
+        if (!newEmail.trim()) {
+          setEmailError('Enter your new email address.');
+          return;
+        }
+        await requestNewEmail(newEmail.trim());
+        setEmailStep(4);
+      } else {
+        await verifyNewEmail(emailOtp.trim());
+        setEmailModalVisible(false);
+        resetEmailFlow();
+        await loadData(true);
+        Alert.alert('Email updated', 'Your email address has been changed.');
+      }
+    } catch (err) {
+      setEmailError(getErrorMessage(err));
+    } finally {
+      setEmailBusy(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete account',
+      'This will permanently deactivate your account. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              await signOut();
+              router.replace('/(auth)/login');
+            } catch (err) {
+              Alert.alert('Error', getErrorMessage(err));
+            }
+          },
+        },
+      ]
+    );
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
@@ -506,6 +585,28 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* ── Account ─────────────────────────────────────────────────────── */}
+        <View style={styles.sectionWrapper}>
+          <Text style={styles.sectionTitle}>Account</Text>
+          <View style={styles.sectionCard}>
+            <TouchableOpacity style={styles.accountRow} onPress={() => router.push('/notifications')}>
+              <Ionicons name="notifications-outline" size={20} color="#6366f1" />
+              <Text style={styles.accountRowText}>Notification history</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.accountRow} onPress={openEmailChange}>
+              <Ionicons name="mail-outline" size={20} color="#6366f1" />
+              <Text style={styles.accountRowText}>Change email</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.accountRow, styles.accountRowLast]} onPress={handleDeleteAccount}>
+              <Ionicons name="trash-outline" size={20} color="#ef4444" />
+              <Text style={[styles.accountRowText, { color: '#ef4444' }]}>Delete account</Text>
+              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {/* ── Logout ──────────────────────────────────────────────────────── */}
         <TouchableOpacity
           style={styles.logoutBtn}
@@ -623,6 +724,66 @@ export default function ProfileScreen() {
               {planChangeError && (
                 <Text style={styles.planChangeError}>{planChangeError}</Text>
               )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={emailModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEmailModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Change email</Text>
+              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setEmailModalVisible(false)}>
+                <Ionicons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={styles.modalScroll}>
+              <Text style={styles.emptySubText}>
+                {emailStep === 1 && 'We will send a verification code to your current email.'}
+                {emailStep === 2 && 'Enter the OTP sent to your current email.'}
+                {emailStep === 3 && 'Enter the new email address you want to use.'}
+                {emailStep === 4 && 'Enter the OTP sent to your new email.'}
+              </Text>
+              {emailStep === 2 || emailStep === 4 ? (
+                <TextInput
+                  style={styles.textInput}
+                  value={emailOtp}
+                  onChangeText={setEmailOtp}
+                  placeholder="6-digit OTP"
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+              ) : null}
+              {emailStep === 3 ? (
+                <TextInput
+                  style={styles.textInput}
+                  value={newEmail}
+                  onChangeText={setNewEmail}
+                  placeholder="new@email.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              ) : null}
+              {emailError ? <Text style={styles.planChangeError}>{emailError}</Text> : null}
+              <TouchableOpacity
+                style={styles.browsePlansBtn}
+                onPress={handleEmailStep}
+                disabled={emailBusy}
+              >
+                {emailBusy ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.browsePlansBtnText}>
+                    {emailStep === 1 ? 'Send OTP' : emailStep === 4 ? 'Confirm new email' : 'Continue'}
+                  </Text>
+                )}
+              </TouchableOpacity>
             </ScrollView>
           </View>
         </View>

@@ -202,13 +202,15 @@ export default function DashboardScreen() {
           <AppText variant="h2">{pct}%</AppText>
           <AppText variant="caption">Done</AppText>
         </Card>
-        <Card style={styles.statCard}>
-          <View style={[styles.statIcon, { backgroundColor: '#EEF2FF' }]}>
-            <Ionicons name="notifications-outline" size={18} color={palette.primaryLight} />
-          </View>
-          <AppText variant="h2">{stats.reminderCount}</AppText>
-          <AppText variant="caption">Alerts</AppText>
-        </Card>
+        <TouchableOpacity activeOpacity={0.85} onPress={() => router.push('/notifications')}>
+          <Card style={styles.statCard}>
+            <View style={[styles.statIcon, { backgroundColor: '#EEF2FF' }]}>
+              <Ionicons name="notifications-outline" size={18} color={palette.primaryLight} />
+            </View>
+            <AppText variant="h2">{stats.reminderCount}</AppText>
+            <AppText variant="caption">Alerts</AppText>
+          </Card>
+        </TouchableOpacity>
       </View>
 
       <SectionHeader
