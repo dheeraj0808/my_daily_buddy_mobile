@@ -9,6 +9,7 @@ import ScreenHeader from '@/components/ui/ScreenHeader';
 import CatchUpPanel from '@/features/catchup/CatchUpPanel';
 import GoalsPanel from '@/features/goals/GoalsPanel';
 import HabitsPanel from '@/features/habits/HabitsPanel';
+import { useCatchUp } from '@/hooks/use-catchup';
 import { useGoals } from '@/hooks/use-goals';
 import { useHabits } from '@/hooks/use-habits';
 import { palette } from '@/theme';
@@ -35,6 +36,7 @@ export default function TrackScreen() {
 
   const habitsState = useHabits();
   const goalsState = useGoals();
+  const catchUpState = useCatchUp();
 
   const openHabitsAdd = useRef<() => void>(() => {});
   const openGoalsAdd = useRef<() => void>(() => {});
@@ -51,7 +53,7 @@ export default function TrackScreen() {
   const isHabits = activeKey === 'habits';
   const isGoals = activeKey === 'goals';
   const isRecovery = activeKey === 'recovery';
-  const activeState = isHabits ? habitsState : isGoals ? goalsState : null;
+  const activeState = isHabits ? habitsState : isGoals ? goalsState : isRecovery ? catchUpState : null;
 
   useEffect(() => {
     if (segmentParam) {
@@ -109,7 +111,7 @@ export default function TrackScreen() {
       ) : isGoals ? (
         <GoalsPanel state={goalsState} onAddReady={registerGoalsAdd} />
       ) : (
-        <CatchUpPanel onSubtitleChange={setSubtitle} />
+        <CatchUpPanel state={catchUpState} onSubtitleChange={setSubtitle} />
       )}
     </Screen>
   );

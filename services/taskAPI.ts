@@ -42,9 +42,15 @@ export async function getTodayTasks(limit = 50): Promise<PaginatedResponse<Task>
 export async function listTasks(params?: {
   page?: number;
   limit?: number;
+  /** Filter by completion — sent to API as `isCompleted`. */
   completed?: boolean;
 }): Promise<PaginatedResponse<Task>> {
-  const response = await api.get('/tasks', { params: { ...params, tz: tz() } });
+  const { completed, ...rest } = params ?? {};
+  const query: Record<string, unknown> = { ...rest, tz: tz() };
+  if (completed !== undefined) {
+    query.isCompleted = completed;
+  }
+  const response = await api.get('/tasks', { params: query });
   return unwrapPaginated<Task>(response);
 }
 
