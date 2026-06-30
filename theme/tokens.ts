@@ -38,6 +38,7 @@ export const gradients = {
   goals: ['#8B5CF6', '#6366F1'] as const,
   track: ['#10B981', '#8B5CF6'] as const,
   auth: ['#4F46E5', '#3730A3'] as const,
+  profile: ['#8B5CF6', '#6366F1'] as const,
 } as const;
 
 export type ScreenAccent = keyof typeof gradients;

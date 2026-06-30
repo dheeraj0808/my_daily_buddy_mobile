@@ -16,6 +16,7 @@ interface Props {
   subtitle?: string;
   onAdd?: () => void;
   addLabel?: string;
+  onBack?: () => void;
   stats?: StatItem[];
   children?: React.ReactNode;
   style?: ViewStyle;
@@ -27,6 +28,7 @@ export default function ScreenHeader({
   subtitle,
   onAdd,
   addLabel = '+ Add',
+  onBack,
   stats,
   children,
   style,
@@ -34,7 +36,14 @@ export default function ScreenHeader({
   return (
     <LinearGradient colors={[...gradients[accent]]} style={[styles.wrap, style]}>
       <View style={styles.top}>
-        <View style={styles.titles}>
+        {onBack ? (
+          <TouchableOpacity onPress={onBack} style={styles.backBtn} hitSlop={12}>
+            <AppText variant="h2" color={palette.onPrimary}>
+              ←
+            </AppText>
+          </TouchableOpacity>
+        ) : null}
+        <View style={[styles.titles, onBack && styles.titlesWithBack]}>
           <AppText variant="h1" color={palette.onPrimary}>
             {title}
           </AppText>
@@ -89,6 +98,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   titles: { flex: 1, marginRight: spacing.sm },
+  titlesWithBack: { marginLeft: spacing.sm },
+  backBtn: {
+    paddingTop: 2,
+    paddingRight: spacing.xs,
+  },
   sub: { marginTop: 2 },
   addBtn: {
     backgroundColor: palette.onPrimarySubtle,
