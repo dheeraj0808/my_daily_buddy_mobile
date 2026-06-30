@@ -17,9 +17,10 @@ interface Props {
   visible: boolean;
   title: string;
   onClose: () => void;
-  onSubmit: () => void;
+  onSubmit?: () => void;
   submitLabel?: string;
   loading?: boolean;
+  hideSubmit?: boolean;
   children: React.ReactNode;
 }
 
@@ -30,6 +31,7 @@ export default function FormModal({
   onSubmit,
   submitLabel = 'Save',
   loading,
+  hideSubmit,
   children,
 }: Props) {
   const handleClose = () => {
@@ -53,20 +55,22 @@ export default function FormModal({
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {children}
           </ScrollView>
-          <TouchableOpacity
-            style={[styles.submit, loading && styles.submitDisabled]}
-            onPress={onSubmit}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color={palette.white} />
-            ) : (
-              <AppText variant="title" color={palette.white}>
-                {submitLabel}
-              </AppText>
-            )}
-          </TouchableOpacity>
+          {!hideSubmit && onSubmit ? (
+            <TouchableOpacity
+              style={[styles.submit, loading && styles.submitDisabled]}
+              onPress={onSubmit}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color={palette.white} />
+              ) : (
+                <AppText variant="title" color={palette.white}>
+                  {submitLabel}
+                </AppText>
+              )}
+            </TouchableOpacity>
+          ) : null}
         </Pressable>
       </Pressable>
     </Modal>

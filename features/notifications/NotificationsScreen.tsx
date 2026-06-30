@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -6,18 +7,35 @@ import EmptyState from '@/components/shared/EmptyState';
 import ErrorBanner from '@/components/shared/ErrorBanner';
 import LoadingState from '@/components/shared/LoadingState';
 import AppText from '@/components/ui/AppText';
+import Card from '@/components/ui/Card';
 import Screen from '@/components/ui/Screen';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import { useNotifications } from '@/hooks/use-notifications';
-import { palette, radius, shadows, spacing } from '@/theme';
+import { palette, radius, spacing } from '@/theme';
 import { formatTime } from '@/utils/timezone';
+
+function statusStyle(status: string) {
+  const s = status.toUpperCase();
+  if (s === 'SENT' || s === 'DELIVERED') return { bg: palette.success + '18', color: palette.success };
+  if (s === 'FAILED') return { bg: palette.error + '18', color: palette.error };
+  return { bg: palette.warning + '18', color: palette.warning };
+}
 
 export default function NotificationsScreen() {
   const { notifications, loading, refreshing, error, refresh, reload } = useNotifications();
 
   if (loading && !refreshing) {
     return (
-      <Screen header={<ScreenHeader accent="primary" title="Notifications" subtitle="Loading…" />}>
+      <Screen
+        header={
+          <ScreenHeader
+            accent="primary"
+            title="Notifications"
+            subtitle="Loading…"
+            onBack={() => router.back()}
+          />
+        }
+      >
         <LoadingState />
       </Screen>
     );
@@ -32,6 +50,7 @@ export default function NotificationsScreen() {
           accent="primary"
           title="Notifications"
           subtitle={`${notifications.length} total`}
+          onBack={() => router.back()}
         />
       }
     >
@@ -44,46 +63,46 @@ export default function NotificationsScreen() {
           subtitle="Reminder alerts and updates will appear here."
         />
       ) : (
-        notifications.map((n) => (
-          <View key={n.id} style={styles.card}>
-            <View style={styles.iconWrap}>
-              <Ionicons
-                name={n.type === 'REMINDER' ? 'alarm-outline' : 'notifications-outline'}
-                size={20}
-                color={palette.primaryLight}
-              />
-            </View>
-            <View style={styles.body}>
-              <AppText variant="title">{n.title}</AppText>
-              <AppText variant="body" color={palette.textSecondary}>
-                {n.body}
-              </AppText>
-              <View style={styles.meta}>
-                <AppText variant="caption" color={palette.textMuted}>
-                  {n.status}
-                </AppText>
-                <AppText variant="caption" color={palette.textMuted}>
-                  {formatTime(n.sent_at ?? n.created_at)}
-                </AppText>
+        notifications.map((n) => {
+          const badge = statusStyle(n.status);
+          return (
+            <Card key={n.id} padded style={styles.card}>
+              <View style={styles.row}>
+                <View style={styles.iconWrap}>
+                  <Ionicons
+                    name={n.type === 'REMINDER' ? 'alarm-outline' : 'notifications-outline'}
+                    size={20}
+                    color={palette.primaryLight}
+                  />
+                </View>
+                <View style={styles.body}>
+                  <AppText variant="title">{n.title}</AppText>
+                  <AppText variant="body" color={palette.textSecondary}>
+                    {n.body}
+                  </AppText>
+                  <View style={styles.meta}>
+                    <View style={[styles.statusPill, { backgroundColor: badge.bg }]}>
+                      <AppText variant="caption" color={badge.color}>
+                        {n.status}
+                      </AppText>
+                    </View>
+                    <AppText variant="caption" color={palette.textMuted}>
+                      {formatTime(n.sent_at ?? n.created_at)}
+                    </AppText>
+                  </View>
+                </View>
               </View>
-            </View>
-          </View>
-        ))
+            </Card>
+          );
+        })
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    backgroundColor: palette.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    gap: spacing.sm,
-    ...shadows.sm,
-  },
+  card: { marginBottom: spacing.sm },
+  row: { flexDirection: 'row', gap: spacing.sm },
   iconWrap: {
     width: 40,
     height: 40,
@@ -93,5 +112,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   body: { flex: 1, gap: 4 },
-  meta: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 },
+  meta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  statusPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
 });

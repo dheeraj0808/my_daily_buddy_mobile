@@ -97,6 +97,29 @@ export default function CatchUpPanel({ onSubtitleChange }: Props) {
                 ))}
               </View>
             ) : null}
+            {plan.adjustments?.length ? (
+              <View style={styles.adjustments}>
+                <AppText variant="label" color={palette.textSecondary}>
+                  Suggested adjustments
+                </AppText>
+                {plan.adjustments.map((adj) => (
+                  <View key={adj.id} style={styles.adjustmentRow}>
+                    <View style={styles.adjustmentDot} />
+                    <View style={styles.adjustmentBody}>
+                      <AppText variant="title">{adj.title}</AppText>
+                      {adj.description ? (
+                        <AppText variant="caption" color={palette.textMuted}>
+                          {adj.description}
+                        </AppText>
+                      ) : null}
+                      <AppText variant="caption" color={palette.primaryLight}>
+                        {adj.adjustment_type.replace(/_/g, ' ')}
+                      </AppText>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : null}
             {plan.status === 'DRAFT' ? (
               <View style={styles.actions}>
                 <TouchableOpacity
@@ -178,6 +201,22 @@ const styles = StyleSheet.create({
   planHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.sm },
   statusBadge: { borderRadius: radius.sm, paddingHorizontal: 8, paddingVertical: 2 },
   insights: { gap: 4 },
+  adjustments: {
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+    paddingTop: spacing.sm,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.border,
+  },
+  adjustmentRow: { flexDirection: 'row', gap: spacing.sm, alignItems: 'flex-start' },
+  adjustmentDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: palette.primaryLight,
+    marginTop: 7,
+  },
+  adjustmentBody: { flex: 1, gap: 2 },
   actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs },
   acceptBtn: {
     flex: 1,

@@ -1,43 +1,43 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as ImagePicker from 'expo-image-picker';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Image,
-    Modal,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Image,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
+import ErrorBanner from '@/components/shared/ErrorBanner';
+import FormModal, { FormField } from '@/components/shared/FormModal';
+import LoadingState from '@/components/shared/LoadingState';
+import SettingsRow from '@/components/shared/SettingsRow';
+import AppText from '@/components/ui/AppText';
+import Card from '@/components/ui/Card';
+import { SectionHeader } from '@/components/ui/FilterChips';
 import Screen from '@/components/ui/Screen';
+import ScreenHeader from '@/components/ui/ScreenHeader';
 import { useAuth } from '@/contexts/AuthContext';
 import type { UpdateProfilePayload, UserProfile } from '@/services/profileAPI';
 import {
-    deleteAccount,
-    getProfile,
-    initiateEmailChange,
-    loadProfileImageUri,
-    requestNewEmail,
-    saveProfileImageUri,
-    updateProfile,
-    uploadProfileImage,
-    verifyCurrentEmail,
-    verifyNewEmail,
+  deleteAccount,
+  getProfile,
+  initiateEmailChange,
+  loadProfileImageUri,
+  requestNewEmail,
+  saveProfileImageUri,
+  updateProfile,
+  uploadProfileImage,
+  verifyCurrentEmail,
+  verifyNewEmail,
 } from '@/services/profileAPI';
 import type { Plan, UserSubscription } from '@/services/subscriptionAPI';
-import {
-    changePlan,
-    getAllPlans,
-    getMySubscription,
-} from '@/services/subscriptionAPI';
+import { changePlan, getAllPlans, getMySubscription } from '@/services/subscriptionAPI';
+import { palette, radius, spacing } from '@/theme';
 import { getErrorMessage } from '@/utils/errors';
-import styles from './profile.styles';
 
 function formatDate(d: string): string {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {
@@ -48,6 +48,40 @@ function formatDate(d: string): string {
 }
 
 const PHONE_REGEX = /^\+?[1-9]\d{1,14}$/;
+
+function InfoRow({
+  icon,
+  iconColor,
+  iconBg,
+  label,
+  value,
+  muted,
+  isLast,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  iconColor: string;
+  iconBg: string;
+  label: string;
+  value: string;
+  muted?: boolean;
+  isLast?: boolean;
+}) {
+  return (
+    <View style={[styles.infoRow, !isLast && styles.infoRowBorder]}>
+      <View style={[styles.infoIcon, { backgroundColor: iconBg }]}>
+        <Ionicons name={icon} size={18} color={iconColor} />
+      </View>
+      <View style={styles.infoBody}>
+        <AppText variant="caption" color={palette.textMuted}>
+          {label}
+        </AppText>
+        <AppText variant="title" color={muted ? palette.textMuted : palette.text}>
+          {value}
+        </AppText>
+      </View>
+    </View>
+  );
+}
 
 export default function ProfileScreen() {
   const { signOut } = useAuth();
@@ -60,7 +94,7 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [isEditing, setIsEditing] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [editFirstName, setEditFirstName] = useState('');
   const [editLastName, setEditLastName] = useState('');
   const [editPhone, setEditPhone] = useState('');
@@ -115,36 +149,46 @@ export default function ProfileScreen() {
     setRefreshing(false);
   }, []);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
-  // ── Derived values ────────────────────────────────────────────────────────
-  const initials = [profile?.first_name, profile?.last_name]
-    .filter(Boolean)
-    .map((s) => s![0].toUpperCase())
-    .join('') || profile?.email?.[0].toUpperCase() || '?';
+  const initials =
+    [profile?.first_name, profile?.last_name]
+      .filter(Boolean)
+      .map((s) => s![0].toUpperCase())
+      .join('') ||
+    profile?.email?.[0].toUpperCase() ||
+    '?';
 
   const displayName =
-    [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
-    'Your Profile';
+    [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Your Profile';
 
   const freePlan = plans.find(
-    (p) => p.plan_code === 'FREE_PLAN' || p.name.toLowerCase().includes('free')
+    (p) => p.plan_code === 'FREE_PLAN' || p.name.toLowerCase().includes('free'),
   );
 
-  const isOnFreePlan =
-    !subscription || subscription.plan?.plan_code === 'FREE_PLAN';
+  const isOnFreePlan = !subscription || subscription.plan?.plan_code === 'FREE_PLAN';
 
   const displayPlans = plans
     .filter((p) => p.is_active)
     .sort((a, b) => Number(a.price) - Number(b.price));
 
-  // ── Handlers ──────────────────────────────────────────────────────────────
+  const openEditModal = () => {
+    setEditFirstName(profile?.first_name ?? '');
+    setEditLastName(profile?.last_name ?? '');
+    setEditPhone(profile?.phone ?? '');
+    setPhoneError(null);
+    setSaveError(null);
+    setEditModalVisible(true);
+  };
+
   const handlePickImage = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
       Alert.alert(
         'Permission Required',
-        'Please allow access to your photo library to update your profile picture.'
+        'Please allow access to your photo library to update your profile picture.',
       );
       return;
     }
@@ -191,21 +235,12 @@ export default function ProfileScreen() {
 
       const updated = await updateProfile(payload);
       setProfile(updated);
-      setIsEditing(false);
+      setEditModalVisible(false);
     } catch (err) {
       setSaveError(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleCancelEdit = () => {
-    setEditFirstName(profile?.first_name ?? '');
-    setEditLastName(profile?.last_name ?? '');
-    setEditPhone(profile?.phone ?? '');
-    setPhoneError(null);
-    setSaveError(null);
-    setIsEditing(false);
   };
 
   const handleChangePlan = async (planId: string) => {
@@ -238,7 +273,7 @@ export default function ProfileScreen() {
           style: 'destructive',
           onPress: () => handleChangePlan(freePlan.id),
         },
-      ]
+      ],
     );
   };
 
@@ -302,6 +337,19 @@ export default function ProfileScreen() {
     }
   };
 
+  const emailStepHint = () => {
+    if (emailStep === 1) return 'We will send a verification code to your current email.';
+    if (emailStep === 2) return 'Enter the OTP sent to your current email.';
+    if (emailStep === 3) return 'Enter the new email address you want to use.';
+    return 'Enter the OTP sent to your new email.';
+  };
+
+  const emailSubmitLabel = () => {
+    if (emailStep === 1) return 'Send OTP';
+    if (emailStep === 4) return 'Confirm new email';
+    return 'Continue';
+  };
+
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete account',
@@ -321,32 +369,22 @@ export default function ProfileScreen() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <Screen scroll={false}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#6366f1" />
-          <Text style={styles.loadingText}>Loading profile…</Text>
-        </View>
+      <Screen header={<ScreenHeader accent="profile" title="Profile" subtitle="Loading…" />}>
+        <LoadingState />
       </Screen>
     );
   }
 
-  if (error) {
+  if (error && !profile) {
     return (
-      <Screen scroll={false}>
-        <View style={styles.errorContainer}>
-          <Ionicons name="cloud-offline-outline" size={48} color="#94a3b8" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryBtn} onPress={() => loadData()}>
-            <Text style={styles.retryBtnText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
+      <Screen header={<ScreenHeader accent="profile" title="Profile" />}>
+        <ErrorBanner message={error} onRetry={() => loadData()} />
       </Screen>
     );
   }
@@ -357,437 +395,508 @@ export default function ProfileScreen() {
         refreshing={refreshing}
         onRefresh={() => loadData(true)}
         header={
-          <LinearGradient colors={['#8b5cf6', '#6366f1']} style={styles.header}>
+          <ScreenHeader
+            accent="profile"
+            title={displayName}
+            subtitle={profile?.email}
+            onAdd={openEditModal}
+            addLabel="Edit"
+          >
             <TouchableOpacity
-              style={styles.avatarWrapper}
+              style={styles.avatarWrap}
               onPress={handlePickImage}
               activeOpacity={0.85}
             >
               {avatarUri ? (
                 <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
               ) : (
-                <View style={styles.avatarInitialsCircle}>
-                  <Text style={styles.avatarInitialsText}>{initials}</Text>
+                <View style={styles.avatarInitials}>
+                  <AppText variant="h1" color={palette.onPrimary}>
+                    {initials}
+                  </AppText>
                 </View>
               )}
               {uploadingImage ? (
-                <View style={styles.uploadingOverlay}>
-                  <ActivityIndicator size="small" color="#fff" />
+                <View style={styles.avatarOverlay}>
+                  <ActivityIndicator size="small" color={palette.white} />
                 </View>
               ) : (
-                <View style={styles.cameraOverlay}>
-                  <Ionicons name="camera" size={14} color="#fff" />
+                <View style={styles.cameraBadge}>
+                  <Ionicons name="camera" size={12} color={palette.white} />
                 </View>
               )}
             </TouchableOpacity>
-
-            <Text style={styles.headerName}>{displayName}</Text>
-            <Text style={styles.headerEmail}>{profile?.email}</Text>
-
-            {profile?.isVerified && (
+            {profile?.isVerified ? (
               <View style={styles.verifiedBadge}>
-                <Ionicons name="checkmark-circle" size={13} color="#86efac" />
-                <Text style={styles.verifiedBadgeText}>Verified</Text>
+                <Ionicons name="checkmark-circle" size={14} color="#86efac" />
+                <AppText variant="caption" color="#86efac">
+                  Verified
+                </AppText>
               </View>
-            )}
-
-            {!isEditing && (
-              <TouchableOpacity
-                style={styles.editProfileBtn}
-                onPress={() => setIsEditing(true)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.editProfileBtnText}>✏️ Edit Profile</Text>
-              </TouchableOpacity>
-            )}
-          </LinearGradient>
+            ) : null}
+          </ScreenHeader>
         }
       >
-        {/* ── Edit Profile Form ───────────────────────────────────────────── */}
-        {isEditing && (
-          <View style={styles.sectionWrapper}>
-            <Text style={styles.sectionTitle}>Edit Profile</Text>
-            <View style={styles.sectionCard}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>First Name</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editFirstName}
-                  onChangeText={setEditFirstName}
-                  placeholder="First name"
-                  placeholderTextColor="#94a3b8"
-                  autoCapitalize="words"
-                />
+        {error ? <ErrorBanner message={error} onRetry={() => loadData(true)} /> : null}
+
+        <SectionHeader title="Account" />
+        <Card padded>
+          <InfoRow
+            icon="mail-outline"
+            iconColor={palette.primaryLight}
+            iconBg={palette.primaryLight + '18'}
+            label="Email"
+            value={profile?.email ?? '—'}
+          />
+          <InfoRow
+            icon="call-outline"
+            iconColor={palette.success}
+            iconBg={palette.success + '18'}
+            label="Phone"
+            value={profile?.phone ?? 'Not added'}
+            muted={!profile?.phone}
+          />
+          <InfoRow
+            icon="calendar-outline"
+            iconColor={palette.warning}
+            iconBg={palette.warning + '18'}
+            label="Member since"
+            value={
+              profile?.createdAt ? formatDate(profile.createdAt.split('T')[0]) : '—'
+            }
+            isLast
+          />
+        </Card>
+
+        <SectionHeader title="Subscription" />
+        <Card padded>
+          {subscription ? (
+            <>
+              <View style={styles.subHeader}>
+                <View>
+                  <AppText variant="h2">{subscription.plan.name}</AppText>
+                  <View style={styles.priceRow}>
+                    <AppText variant="title" color={palette.primaryLight}>
+                      {Number(subscription.plan.price) === 0
+                        ? 'Free'
+                        : `₹${Number(subscription.plan.price).toFixed(2)}`}
+                    </AppText>
+                    {Number(subscription.plan.compare_at_price) >
+                      Number(subscription.plan.price) && (
+                      <AppText variant="caption" color={palette.textMuted} style={styles.strike}>
+                        ₹{Number(subscription.plan.compare_at_price).toFixed(2)}
+                      </AppText>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.activePill}>
+                  <AppText variant="caption" color={palette.success}>
+                    Active
+                  </AppText>
+                </View>
               </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Last Name</Text>
-                <TextInput
-                  style={styles.textInput}
-                  value={editLastName}
-                  onChangeText={setEditLastName}
-                  placeholder="Last name"
-                  placeholderTextColor="#94a3b8"
-                  autoCapitalize="words"
-                />
+
+              <View style={styles.dateRow}>
+                <View>
+                  <AppText variant="caption" color={palette.textMuted}>
+                    Start
+                  </AppText>
+                  <AppText variant="title">{formatDate(subscription.start_date)}</AppText>
+                </View>
+                <View>
+                  <AppText variant="caption" color={palette.textMuted}>
+                    Valid until
+                  </AppText>
+                  <AppText variant="title">{formatDate(subscription.end_date)}</AppText>
+                </View>
               </View>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Phone</Text>
-                <TextInput
-                  style={[styles.textInput, phoneError ? { borderColor: '#ef4444' } : null]}
-                  value={editPhone}
-                  onChangeText={(t: string) => { setEditPhone(t); setPhoneError(null); }}
-                  placeholder="+919876543210"
-                  placeholderTextColor="#94a3b8"
-                  keyboardType="phone-pad"
-                />
-                {phoneError && <Text style={styles.inputError}>{phoneError}</Text>}
-              </View>
-              {saveError && <Text style={styles.saveErrorText}>{saveError}</Text>}
-              <View style={styles.actionsRow}>
+
+              <View style={styles.subActions}>
                 <TouchableOpacity
-                  style={styles.cancelBtn}
-                  onPress={handleCancelEdit}
-                  activeOpacity={0.7}
+                  style={styles.primaryOutlineBtn}
+                  onPress={() => {
+                    setPlanChangeError(null);
+                    setPlanModalVisible(true);
+                  }}
                 >
-                  <Text style={styles.cancelBtnText}>Cancel</Text>
+                  <AppText variant="label" color={palette.primaryLight}>
+                    Change plan
+                  </AppText>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.saveBtn}
-                  onPress={handleSaveProfile}
-                  activeOpacity={0.85}
-                  disabled={saving}
-                >
-                  {saving ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <Text style={styles.saveBtnText}>Save Changes</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* ── Account Info ────────────────────────────────────────────────── */}
-        {!isEditing && (
-          <View style={styles.sectionWrapper}>
-            <Text style={styles.sectionTitle}>Account</Text>
-            <View style={styles.sectionCard}>
-              <View style={styles.infoRow}>
-                <View style={[styles.infoIconBg, { backgroundColor: '#ede9fe' }]}>
-                  <Ionicons name="mail-outline" size={18} color="#6366f1" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.infoLabel}>Email</Text>
-                  <Text style={styles.infoValue}>{profile?.email}</Text>
-                </View>
-              </View>
-              <View style={styles.infoRow}>
-                <View style={[styles.infoIconBg, { backgroundColor: '#dcfce7' }]}>
-                  <Ionicons name="call-outline" size={18} color="#22c55e" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.infoLabel}>Phone</Text>
-                  {profile?.phone ? (
-                    <Text style={styles.infoValue}>{profile.phone}</Text>
-                  ) : (
-                    <Text style={styles.infoValueMuted}>Not added</Text>
-                  )}
-                </View>
-              </View>
-              <View style={[styles.infoRow, styles.infoRowLast]}>
-                <View style={[styles.infoIconBg, { backgroundColor: '#fef9c3' }]}>
-                  <Ionicons name="calendar-outline" size={18} color="#ca8a04" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.infoLabel}>Member Since</Text>
-                  <Text style={styles.infoValue}>
-                    {profile?.createdAt ? formatDate(profile.createdAt.split('T')[0]) : '—'}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* ── Subscription ────────────────────────────────────────────────── */}
-        <View style={styles.sectionWrapper}>
-          <Text style={styles.sectionTitle}>Subscription</Text>
-          <View style={styles.sectionCard}>
-            {subscription ? (
-              <>
-                <View style={styles.subPlanRow}>
-                  <View>
-                    <Text style={styles.subPlanName}>{subscription.plan.name}</Text>
-                    <View style={styles.subPriceRow}>
-                      <Text style={styles.subPlanPrice}>
-                        {Number(subscription.plan.price) === 0
-                          ? 'Free'
-                          : `₹${Number(subscription.plan.price).toFixed(2)}`}
-                      </Text>
-                      {Number(subscription.plan.compare_at_price) > Number(subscription.plan.price) && (
-                        <Text style={styles.subOldPrice}>
-                          ₹{Number(subscription.plan.compare_at_price).toFixed(2)}
-                        </Text>
-                      )}
-                    </View>
-                  </View>
-                  <View style={styles.activeBadge}>
-                    <Text style={styles.activeBadgeText}>● Active</Text>
-                  </View>
-                </View>
-
-                <View style={styles.subDivider} />
-
-                <View style={styles.subDatesRow}>
-                  <View style={styles.subDateBlock}>
-                    <Text style={styles.subDateLabel}>Start Date</Text>
-                    <Text style={styles.subDateValue}>{formatDate(subscription.start_date)}</Text>
-                  </View>
-                  <View style={styles.subDateBlock}>
-                    <Text style={styles.subDateLabel}>Valid Until</Text>
-                    <Text style={styles.subDateValue}>{formatDate(subscription.end_date)}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.subActionsRow}>
-                  <TouchableOpacity
-                    style={styles.changePlanBtn}
-                    onPress={() => { setPlanChangeError(null); setPlanModalVisible(true); }}
-                    activeOpacity={0.85}
-                  >
-                    <Text style={styles.changePlanBtnText}>Change Plan</Text>
+                {!isOnFreePlan ? (
+                  <TouchableOpacity style={styles.textBtn} onPress={handleCancelSubscription}>
+                    <AppText variant="label" color={palette.error}>
+                      Cancel
+                    </AppText>
                   </TouchableOpacity>
-                  {!isOnFreePlan && (
-                    <TouchableOpacity
-                      style={styles.cancelSubBtn}
-                      onPress={handleCancelSubscription}
-                      activeOpacity={0.8}
-                    >
-                      <Text style={styles.cancelSubBtnText}>Cancel</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              </>
-            ) : (
-              <View style={styles.emptySubCard}>
-                <Ionicons name="ribbon-outline" size={36} color="#94a3b8" />
-                <Text style={styles.emptySubText}>No active subscription</Text>
-                <TouchableOpacity
-                  style={styles.browsePlansBtn}
-                  onPress={() => { setPlanChangeError(null); setPlanModalVisible(true); }}
-                  activeOpacity={0.85}
-                >
-                  <Text style={styles.browsePlansBtnText}>Browse Plans</Text>
-                </TouchableOpacity>
+                ) : null}
               </View>
-            )}
-          </View>
-        </View>
+            </>
+          ) : (
+            <View style={styles.emptySub}>
+              <Ionicons name="ribbon-outline" size={32} color={palette.textMuted} />
+              <AppText variant="body" color={palette.textSecondary}>
+                No active subscription
+              </AppText>
+              <TouchableOpacity
+                style={styles.primaryOutlineBtn}
+                onPress={() => {
+                  setPlanChangeError(null);
+                  setPlanModalVisible(true);
+                }}
+              >
+                <AppText variant="label" color={palette.primaryLight}>
+                  Browse plans
+                </AppText>
+              </TouchableOpacity>
+            </View>
+          )}
+        </Card>
 
-        {/* ── Account ─────────────────────────────────────────────────────── */}
-        <View style={styles.sectionWrapper}>
-          <Text style={styles.sectionTitle}>Account</Text>
-          <View style={styles.sectionCard}>
-            <TouchableOpacity style={styles.accountRow} onPress={() => router.push('/notifications')}>
-              <Ionicons name="notifications-outline" size={20} color="#6366f1" />
-              <Text style={styles.accountRowText}>Notification history</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.accountRow} onPress={openEmailChange}>
-              <Ionicons name="mail-outline" size={20} color="#6366f1" />
-              <Text style={styles.accountRowText}>Change email</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.accountRow, styles.accountRowLast]} onPress={handleDeleteAccount}>
-              <Ionicons name="trash-outline" size={20} color="#ef4444" />
-              <Text style={[styles.accountRowText, { color: '#ef4444' }]}>Delete account</Text>
-              <Ionicons name="chevron-forward" size={18} color="#94a3b8" />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <SectionHeader title="Settings" />
+        <Card padded style={styles.settingsCard}>
+          <SettingsRow
+            icon="notifications-outline"
+            label="Notification history"
+            onPress={() => router.push('/notifications')}
+          />
+          <SettingsRow icon="mail-outline" label="Change email" onPress={openEmailChange} />
+          <SettingsRow
+            icon="trash-outline"
+            label="Delete account"
+            destructive
+            onPress={handleDeleteAccount}
+            isLast
+          />
+        </Card>
 
-        {/* ── Logout ──────────────────────────────────────────────────────── */}
-        <TouchableOpacity
-          style={styles.logoutBtn}
-          onPress={handleLogout}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-          <Text style={styles.logoutBtnText}>Logout</Text>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
+          <Ionicons name="log-out-outline" size={20} color={palette.error} />
+          <AppText variant="title" color={palette.error}>
+            Logout
+          </AppText>
         </TouchableOpacity>
 
-        <Text style={styles.versionText}>My Daily Buddy v1.0.0</Text>
+        <AppText variant="caption" color={palette.textMuted} style={styles.version}>
+          My Daily Buddy v1.0.0
+        </AppText>
       </Screen>
 
-      {/* ── Plan Change Modal ──────────────────────────────────────────────── */}
-      <Modal
-        visible={planModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setPlanModalVisible(false)}
+      <FormModal
+        visible={editModalVisible}
+        title="Edit profile"
+        onClose={() => setEditModalVisible(false)}
+        onSubmit={handleSaveProfile}
+        submitLabel="Save changes"
+        loading={saving}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Choose a Plan</Text>
-              <TouchableOpacity
-                style={styles.modalCloseBtn}
-                onPress={() => setPlanModalVisible(false)}
-              >
-                <Ionicons name="close" size={24} color="#64748b" />
-              </TouchableOpacity>
-            </View>
+        <FormField
+          label="First name"
+          value={editFirstName}
+          onChangeText={setEditFirstName}
+          placeholder="First name"
+        />
+        <FormField
+          label="Last name"
+          value={editLastName}
+          onChangeText={setEditLastName}
+          placeholder="Last name"
+        />
+        <FormField
+          label="Phone"
+          value={editPhone}
+          onChangeText={(t) => {
+            setEditPhone(t);
+            setPhoneError(null);
+          }}
+          placeholder="+919876543210"
+        />
+        {phoneError ? (
+          <AppText variant="caption" color={palette.error}>
+            {phoneError}
+          </AppText>
+        ) : null}
+        {saveError ? (
+          <AppText variant="caption" color={palette.error}>
+            {saveError}
+          </AppText>
+        ) : null}
+      </FormModal>
 
-            <ScrollView
-              contentContainerStyle={styles.modalScroll}
-              showsVerticalScrollIndicator={false}
-            >
-              {displayPlans.length === 0 && (
-                <Text style={[styles.emptySubText, { textAlign: 'center', marginTop: 24 }]}>
-                  No plans available.
-                </Text>
-              )}
-
-              {displayPlans.map((plan) => {
-                const isCurrent = subscription?.plan_id === plan.id;
-                const isFree = plan.plan_code === 'FREE_PLAN' || Number(plan.price) === 0;
-                const showSwitchToFree = isFree && !isOnFreePlan;
-
-                return (
-                  <View
-                    key={plan.id}
-                    style={[styles.planCard, isCurrent && styles.planCardActive]}
-                  >
-                    <View style={styles.planCardHeader}>
-                      <Text style={styles.planName}>{plan.name}</Text>
-                      {isCurrent && (
-                        <View style={styles.activePlanBadge}>
-                          <Text style={styles.activePlanBadgeText}>Current</Text>
-                        </View>
-                      )}
-                    </View>
-
-                    <View style={styles.planPriceRow}>
-                      <Text style={styles.planPrice}>
-                        {Number(plan.price) === 0
-                          ? 'Free'
-                          : `₹${Number(plan.price).toFixed(2)}`}
-                      </Text>
-                      {Number(plan.compare_at_price) > Number(plan.price) && (
-                        <Text style={styles.planOldPrice}>
-                          ₹{Number(plan.compare_at_price).toFixed(2)}
-                        </Text>
-                      )}
-                    </View>
-
-                    {plan.description && (
-                      <Text style={styles.planDesc}>{plan.description}</Text>
-                    )}
-
-                    <Text style={styles.planDuration}>
-                      {plan.duration_days >= 99999
-                        ? 'Unlimited duration'
-                        : `${plan.duration_days} days`}
-                    </Text>
-
-                    {isCurrent ? null : showSwitchToFree ? (
-                      <TouchableOpacity
-                        style={styles.switchFreePlanBtn}
-                        onPress={() => handleChangePlan(plan.id)}
-                        disabled={changingPlan}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.switchFreePlanBtnText}>Switch (Cancel Premium)</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity
-                        style={styles.selectPlanBtn}
-                        onPress={() => handleChangePlan(plan.id)}
-                        disabled={changingPlan}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.selectPlanBtnText}>Select Plan</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                );
-              })}
-
-              {changingPlan && (
-                <View style={styles.planChangingOverlay}>
-                  <ActivityIndicator size="small" color="#6366f1" />
-                  <Text style={[styles.loadingText, { marginTop: 6 }]}>Updating plan…</Text>
-                </View>
-              )}
-
-              {planChangeError && (
-                <Text style={styles.planChangeError}>{planChangeError}</Text>
-              )}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal
+      <FormModal
         visible={emailModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setEmailModalVisible(false)}
+        title="Change email"
+        onClose={() => setEmailModalVisible(false)}
+        onSubmit={handleEmailStep}
+        submitLabel={emailSubmitLabel()}
+        loading={emailBusy}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Change email</Text>
-              <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setEmailModalVisible(false)}>
-                <Ionicons name="close" size={24} color="#64748b" />
-              </TouchableOpacity>
-            </View>
-            <ScrollView contentContainerStyle={styles.modalScroll}>
-              <Text style={styles.emptySubText}>
-                {emailStep === 1 && 'We will send a verification code to your current email.'}
-                {emailStep === 2 && 'Enter the OTP sent to your current email.'}
-                {emailStep === 3 && 'Enter the new email address you want to use.'}
-                {emailStep === 4 && 'Enter the OTP sent to your new email.'}
-              </Text>
-              {emailStep === 2 || emailStep === 4 ? (
-                <TextInput
-                  style={styles.textInput}
-                  value={emailOtp}
-                  onChangeText={setEmailOtp}
-                  placeholder="6-digit OTP"
-                  keyboardType="number-pad"
-                  maxLength={6}
-                />
-              ) : null}
-              {emailStep === 3 ? (
-                <TextInput
-                  style={styles.textInput}
-                  value={newEmail}
-                  onChangeText={setNewEmail}
-                  placeholder="new@email.com"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              ) : null}
-              {emailError ? <Text style={styles.planChangeError}>{emailError}</Text> : null}
-              <TouchableOpacity
-                style={styles.browsePlansBtn}
-                onPress={handleEmailStep}
-                disabled={emailBusy}
+        <AppText variant="body" color={palette.textSecondary} style={styles.modalHint}>
+          {emailStepHint()}
+        </AppText>
+        {emailStep === 2 || emailStep === 4 ? (
+          <FormField
+            label="OTP"
+            value={emailOtp}
+            onChangeText={setEmailOtp}
+            placeholder="6-digit code"
+          />
+        ) : null}
+        {emailStep === 3 ? (
+          <FormField
+            label="New email"
+            value={newEmail}
+            onChangeText={setNewEmail}
+            placeholder="new@email.com"
+          />
+        ) : null}
+        {emailError ? (
+          <AppText variant="caption" color={palette.error}>
+            {emailError}
+          </AppText>
+        ) : null}
+      </FormModal>
+
+      <FormModal
+        visible={planModalVisible}
+        title="Choose a plan"
+        onClose={() => setPlanModalVisible(false)}
+        hideSubmit
+      >
+        {displayPlans.length === 0 ? (
+          <AppText variant="body" color={palette.textSecondary} style={styles.modalHint}>
+            No plans available right now.
+          </AppText>
+        ) : (
+          displayPlans.map((plan) => {
+            const isCurrent = subscription?.plan_id === plan.id;
+            const isFree = plan.plan_code === 'FREE_PLAN' || Number(plan.price) === 0;
+            const showSwitchToFree = isFree && !isOnFreePlan;
+
+            return (
+              <View
+                key={plan.id}
+                style={[styles.planCard, isCurrent && styles.planCardCurrent]}
               >
-                {emailBusy ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.browsePlansBtnText}>
-                    {emailStep === 1 ? 'Send OTP' : emailStep === 4 ? 'Confirm new email' : 'Continue'}
-                  </Text>
+                <View style={styles.planCardTop}>
+                  <AppText variant="title">{plan.name}</AppText>
+                  {isCurrent ? (
+                    <View style={styles.currentPill}>
+                      <AppText variant="caption" color={palette.primaryLight}>
+                        Current
+                      </AppText>
+                    </View>
+                  ) : null}
+                </View>
+                <View style={styles.priceRow}>
+                  <AppText variant="h2" color={palette.primaryLight}>
+                    {Number(plan.price) === 0 ? 'Free' : `₹${Number(plan.price).toFixed(2)}`}
+                  </AppText>
+                  {Number(plan.compare_at_price) > Number(plan.price) ? (
+                    <AppText variant="caption" color={palette.textMuted} style={styles.strike}>
+                      ₹{Number(plan.compare_at_price).toFixed(2)}
+                    </AppText>
+                  ) : null}
+                </View>
+                {plan.description ? (
+                  <AppText variant="body" color={palette.textSecondary}>
+                    {plan.description}
+                  </AppText>
+                ) : null}
+                <AppText variant="caption" color={palette.textMuted}>
+                  {plan.duration_days >= 99999
+                    ? 'Unlimited duration'
+                    : `${plan.duration_days} days`}
+                </AppText>
+                {isCurrent ? null : (
+                  <TouchableOpacity
+                    style={showSwitchToFree ? styles.dangerOutlineBtn : styles.selectPlanBtn}
+                    onPress={() => handleChangePlan(plan.id)}
+                    disabled={changingPlan}
+                  >
+                    {changingPlan ? (
+                      <ActivityIndicator
+                        color={showSwitchToFree ? palette.error : palette.white}
+                        size="small"
+                      />
+                    ) : (
+                      <AppText
+                        variant="label"
+                        color={showSwitchToFree ? palette.error : palette.white}
+                      >
+                        {showSwitchToFree ? 'Switch to free' : 'Select plan'}
+                      </AppText>
+                    )}
+                  </TouchableOpacity>
                 )}
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+              </View>
+            );
+          })
+        )}
+        {planChangeError ? (
+          <AppText variant="caption" color={palette.error} style={styles.modalHint}>
+            {planChangeError}
+          </AppText>
+        ) : null}
+      </FormModal>
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  avatarWrap: {
+    alignSelf: 'center',
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  avatarImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  avatarInitials: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  avatarOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 44,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: palette.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: palette.white,
+  },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 4,
+    marginBottom: spacing.xs,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    paddingVertical: 12,
+  },
+  infoRowBorder: {
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: palette.border,
+  },
+  infoIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoBody: { flex: 1, gap: 2 },
+  subHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  priceRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: 4 },
+  strike: { textDecorationLine: 'line-through' },
+  activePill: {
+    backgroundColor: palette.success + '18',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: radius.full,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: palette.border,
+    marginBottom: spacing.md,
+  },
+  subActions: { flexDirection: 'row', gap: spacing.md, alignItems: 'center' },
+  primaryOutlineBtn: {
+    flex: 1,
+    borderWidth: 1.5,
+    borderColor: palette.primaryLight,
+    borderRadius: radius.lg,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  textBtn: { paddingVertical: 12, paddingHorizontal: spacing.sm },
+  emptySub: { alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.sm },
+  settingsCard: { paddingVertical: spacing.xs },
+  logoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 1.5,
+    borderColor: palette.error + '40',
+    backgroundColor: palette.error + '08',
+  },
+  version: { textAlign: 'center', marginTop: spacing.md, marginBottom: spacing.xl },
+  modalHint: { marginBottom: spacing.md },
+  planCard: {
+    borderWidth: 1.5,
+    borderColor: palette.border,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    gap: spacing.xs,
+  },
+  planCardCurrent: {
+    borderColor: palette.primaryLight,
+    backgroundColor: palette.primaryLight + '08',
+  },
+  planCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  currentPill: {
+    backgroundColor: palette.primaryLight + '18',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: radius.full,
+  },
+  selectPlanBtn: {
+    marginTop: spacing.sm,
+    backgroundColor: palette.primaryLight,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  dangerOutlineBtn: {
+    marginTop: spacing.sm,
+    borderWidth: 1.5,
+    borderColor: palette.error,
+    borderRadius: radius.md,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+});
