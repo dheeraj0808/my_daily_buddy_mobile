@@ -90,7 +90,9 @@ export async function markReminderDone(id: string): Promise<Reminder> {
 
 export function isReminderDoneToday(reminder: Reminder): boolean {
   if (!reminder.last_completed_date) return false;
-  return reminder.last_completed_date === new Date().toLocaleDateString('sv-SE');
+  const tz = reminder.timezone || getDeviceTimezone();
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: tz });
+  return reminder.last_completed_date === today;
 }
 
 export function formatRepeatType(repeat: RepeatType): string {
