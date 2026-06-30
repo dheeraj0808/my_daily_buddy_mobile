@@ -8,17 +8,20 @@ import ErrorBanner from '@/components/shared/ErrorBanner';
 import LoadingState from '@/components/shared/LoadingState';
 import AppText from '@/components/ui/AppText';
 import Card from '@/components/ui/Card';
-import { useCatchUp } from '@/hooks/use-catchup';
+import { type useCatchUp } from '@/hooks/use-catchup';
 import { palette, radius, shadows, spacing } from '@/theme';
 import { getErrorMessage } from '@/utils/errors';
 
+type CatchUpState = ReturnType<typeof useCatchUp>;
+
 interface Props {
+  state: CatchUpState;
   onSubtitleChange?: (text: string) => void;
 }
 
-export default function CatchUpPanel({ onSubtitleChange }: Props) {
+export default function CatchUpPanel({ state, onSubtitleChange }: Props) {
   const { plans, loading, error, premiumRequired, reload, generateDraft, acceptPlan, rejectPlan } =
-    useCatchUp();
+    state;
 
   React.useEffect(() => {
     const draft = plans.filter((p) => p.status === 'DRAFT').length;
