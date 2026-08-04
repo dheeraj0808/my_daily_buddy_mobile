@@ -15,6 +15,7 @@ import ErrorBanner from '@/components/shared/ErrorBanner';
 import FormModal, { FormField } from '@/components/shared/FormModal';
 import LoadingState from '@/components/shared/LoadingState';
 import SettingsRow from '@/components/shared/SettingsRow';
+import RazorpayCheckoutModal from '@/components/payments/RazorpayCheckoutModal';
 import AppText from '@/components/ui/AppText';
 import Card from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/FilterChips';
@@ -34,6 +35,8 @@ import {
   verifyCurrentEmail,
   verifyNewEmail,
 } from '@/services/profileAPI';
+import type { CheckoutPayload } from '@/services/paymentAPI';
+import { finishPlanCheckout, startPlanCheckout } from '@/services/checkout';
 import type { Plan, UserSubscription } from '@/services/subscriptionAPI';
 import { changePlan, getAllPlans, getMySubscription } from '@/services/subscriptionAPI';
 import { palette, radius, spacing } from '@/theme';
@@ -107,6 +110,7 @@ export default function ProfileScreen() {
   const [planModalVisible, setPlanModalVisible] = useState(false);
   const [changingPlan, setChangingPlan] = useState(false);
   const [planChangeError, setPlanChangeError] = useState<string | null>(null);
+  const [razorpayCheckout, setRazorpayCheckout] = useState<CheckoutPayload | null>(null);
 
   const [emailModalVisible, setEmailModalVisible] = useState(false);
   const [emailStep, setEmailStep] = useState<1 | 2 | 3 | 4>(1);
@@ -243,14 +247,64 @@ export default function ProfileScreen() {
     }
   };
 
+  const refreshSubscription = async () => {
+    const updated = await getMySubscription();
+    setSubscription(updated);
+    return updated;
+  };
+
   const handleChangePlan = async (planId: string) => {
     setPlanChangeError(null);
     setChangingPlan(true);
     try {
-      const updated = await changePlan(planId);
-      setSubscription(updated);
+      const plan = plans.find((p) => p.id === planId);
+      const isFree =
+        plan?.plan_code === 'FREE_PLAN' ||
+        Number(plan?.price) === 0 ||
+        (plan?.name ?? '').toLowerCase().includes('free');
+
+      if (isFree || !plan) {
+        const updated = await changePlan(planId);
+        setSubscription(updated);
+        setPlanModalVisible(false);
+        Alert.alert('Plan Updated', `You are now on the ${updated.plan.name} plan.`);
+        return;
+      }
+
+      const session = await startPlanCheckout(planId);
+      if (session.mode === 'mock') {
+        const updated = await refreshSubscription();
+        setPlanModalVisible(false);
+        Alert.alert(
+          'Payment successful',
+          `You are now on the ${updated?.plan?.name ?? plan.name} plan.`,
+        );
+        return;
+      }
+
+      setRazorpayCheckout(session.checkout);
+    } catch (err) {
+      setPlanChangeError(getErrorMessage(err));
+    } finally {
+      setChangingPlan(false);
+    }
+  };
+
+  const handleRazorpaySuccess = async (proof: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+  }) => {
+    setRazorpayCheckout(null);
+    setChangingPlan(true);
+    try {
+      await finishPlanCheckout(proof);
+      const updated = await refreshSubscription();
       setPlanModalVisible(false);
-      Alert.alert('Plan Updated', `You are now on the ${updated.plan.name} plan.`);
+      Alert.alert(
+        'Payment successful',
+        `You are now on the ${updated?.plan?.name ?? 'premium'} plan.`,
+      );
     } catch (err) {
       setPlanChangeError(getErrorMessage(err));
     } finally {
@@ -724,7 +778,7 @@ export default function ProfileScreen() {
                         variant="label"
                         color={showSwitchToFree ? palette.error : palette.white}
                       >
-                        {showSwitchToFree ? 'Switch to free' : 'Select plan'}
+                        {showSwitchToFree ? 'Switch to free' : 'Pay & upgrade'}
                       </AppText>
                     )}
                   </TouchableOpacity>
@@ -739,6 +793,25 @@ export default function ProfileScreen() {
           </AppText>
         ) : null}
       </FormModal>
+
+      <RazorpayCheckoutModal
+        visible={Boolean(razorpayCheckout)}
+        checkout={razorpayCheckout}
+        prefill={{
+          email: profile?.email,
+          name: displayName !== 'Your Profile' ? displayName : undefined,
+          contact: profile?.phone ?? undefined,
+        }}
+        onSuccess={handleRazorpaySuccess}
+        onCancel={() => {
+          setRazorpayCheckout(null);
+          setPlanChangeError('Payment cancelled.');
+        }}
+        onError={(message) => {
+          setRazorpayCheckout(null);
+          setPlanChangeError(message);
+        }}
+      />
     </>
   );
 }
