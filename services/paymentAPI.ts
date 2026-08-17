@@ -1,4 +1,5 @@
 import api from './api';
+import { unwrapPaginated } from './types';
 
 export type PaymentProvider = 'razorpay' | 'mock';
 
@@ -74,6 +75,6 @@ export async function listMyPayments(params?: {
   page?: number;
   limit?: number;
 }): Promise<PaymentRecord[]> {
-  const response = await api.get<{ data: PaymentRecord[] }>('/payments/me', { params });
-  return response.data.data;
+  const response = await api.get('/payments/me', { params });
+  return unwrapPaginated<PaymentRecord>(response).data;
 }

@@ -1,5 +1,5 @@
 import api from './api';
-import { unwrapData } from './types';
+import { unwrapData, unwrapPaginated } from './types';
 import { getDeviceTimezone } from '@/utils/timezone';
 
 export interface DailyFoodSummary {
@@ -73,4 +73,41 @@ export async function getFoodGoal(): Promise<{ goalKcal: number }> {
 export async function updateFoodGoal(goalKcal: number): Promise<{ goalKcal: number }> {
   const response = await api.put('/food/goal', { goalKcal });
   return unwrapData(response);
+}
+
+export type MealType = 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK' | 'OTHER';
+
+export interface FoodLogEntry {
+  id: string;
+  user_id: string;
+  food_item_id: string | null;
+  custom_name: string | null;
+  meal_type: MealType;
+  quantity: number;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  logged_at?: string;
+  created_at: string;
+  food_item?: FoodItem | null;
+}
+
+export async function listFoodLogs(params?: {
+  limit?: number;
+  date?: string;
+}): Promise<FoodLogEntry[]> {
+  const response = await api.get('/food/logs', {
+    params: { tz: getDeviceTimezone(), limit: params?.limit ?? 30, date: params?.date },
+  });
+  try {
+    return unwrapPaginated<FoodLogEntry>(response).data;
+  } catch {
+    const result = unwrapData<FoodLogEntry[]>(response);
+    return Array.isArray(result) ? result : [];
+  }
+}
+
+export async function deleteFoodLog(id: string): Promise<void> {
+  await api.delete(`/food/log/${id}`);
 }

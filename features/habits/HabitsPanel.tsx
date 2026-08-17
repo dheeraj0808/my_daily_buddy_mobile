@@ -23,29 +23,53 @@ interface Props {
 }
 
 export default function HabitsPanel({ state, onAddReady }: Props) {
-  const { habits, error, reload, toggleCheckIn, addHabit, removeHabit } = state;
+  const { habits, error, reload, toggleCheckIn, addHabit, editHabit, removeHabit } = state;
   const [modalVisible, setModalVisible] = useState(false);
+  const [editing, setEditing] = useState<HabitWithStreak | null>(null);
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
 
   const completedCount = habits.filter((h) => h.completedToday).length;
   const longestStreak = habits.length ? Math.max(...habits.map((h) => h.streak.longestStreak)) : 0;
 
   useEffect(() => {
-    onAddReady?.(() => setModalVisible(true));
+    onAddReady?.(() => {
+      setEditing(null);
+      setName('');
+      setDescription('');
+      setModalVisible(true);
+    });
   }, [onAddReady]);
 
-  const handleCreate = async () => {
+  const openEdit = (habit: HabitWithStreak) => {
+    setEditing(habit);
+    setName(habit.name);
+    setDescription(habit.description ?? '');
+    setModalVisible(true);
+  };
+
+  const handleSave = async () => {
     if (!name.trim()) return;
     setSaving(true);
     try {
-      await addHabit({
-        name: name.trim(),
-        icon: DEFAULT_HABIT_ICONS[habits.length % DEFAULT_HABIT_ICONS.length],
-        color: DEFAULT_HABIT_COLORS[habits.length % DEFAULT_HABIT_COLORS.length],
-      });
+      if (editing) {
+        await editHabit(editing.id, {
+          name: name.trim(),
+          description: description.trim() || undefined,
+        });
+      } else {
+        await addHabit({
+          name: name.trim(),
+          description: description.trim() || undefined,
+          icon: DEFAULT_HABIT_ICONS[habits.length % DEFAULT_HABIT_ICONS.length],
+          color: DEFAULT_HABIT_COLORS[habits.length % DEFAULT_HABIT_COLORS.length],
+        });
+      }
       setModalVisible(false);
+      setEditing(null);
       setName('');
+      setDescription('');
     } catch (err) {
       Alert.alert('Error', getErrorMessage(err));
     } finally {
@@ -87,11 +111,34 @@ export default function HabitsPanel({ state, onAddReady }: Props) {
       {habits.length === 0 ? (
         <EmptyState icon="flag-outline" title="No habits yet" subtitle="Tap + Add to start tracking." />
       ) : (
-        habits.map((habit) => <HabitRow key={habit.id} habit={habit} onToggle={toggleCheckIn} onDelete={removeHabit} />)
+        habits.map((habit) => (
+          <HabitRow
+            key={habit.id}
+            habit={habit}
+            onToggle={toggleCheckIn}
+            onEdit={openEdit}
+            onDelete={removeHabit}
+          />
+        ))
       )}
 
-      <FormModal visible={modalVisible} title="New habit" onClose={() => setModalVisible(false)} onSubmit={handleCreate} loading={saving}>
+      <FormModal
+        visible={modalVisible}
+        title={editing ? 'Edit habit' : 'New habit'}
+        onClose={() => {
+          setModalVisible(false);
+          setEditing(null);
+        }}
+        onSubmit={handleSave}
+        loading={saving}
+      >
         <FormField label="Habit name" value={name} onChangeText={setName} placeholder="e.g. Morning meditation" />
+        <FormField
+          label="Description (optional)"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Notes"
+        />
       </FormModal>
     </>
   );
@@ -100,32 +147,36 @@ export default function HabitsPanel({ state, onAddReady }: Props) {
 function HabitRow({
   habit,
   onToggle,
+  onEdit,
   onDelete,
 }: {
   habit: HabitWithStreak;
-  onToggle: (h: HabitWithStreak) => void;
-  onDelete: (id: string) => void;
+  onToggle: (h: HabitWithStreak) => Promise<void>;
+  onEdit: (h: HabitWithStreak) => void;
+  onDelete: (id: string) => Promise<void>;
 }) {
   const color = habit.color ?? palette.primaryLight;
   const pct = Math.min(100, Math.round(habit.streak.completionRate));
 
-  const handleToggle = () => {
-    onToggle(habit).catch((err) => Alert.alert('Error', getErrorMessage(err)));
-  };
-
-  const handleDelete = () => {
-    Alert.alert('Delete habit', `Remove "${habit.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
+  const handleLongPress = () => {
+    Alert.alert(habit.name, 'Choose an action', [
+      { text: 'Edit', onPress: () => onEdit(habit) },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: () => onDelete(habit.id).catch((err) => Alert.alert('Error', getErrorMessage(err))),
       },
+      { text: 'Cancel', style: 'cancel' },
     ]);
   };
 
   return (
-    <TouchableOpacity style={styles.habitCard} onPress={handleToggle} onLongPress={handleDelete} activeOpacity={0.85}>
+    <TouchableOpacity
+      style={styles.habitCard}
+      onPress={() => onToggle(habit).catch((err) => Alert.alert('Error', getErrorMessage(err)))}
+      onLongPress={handleLongPress}
+      activeOpacity={0.85}
+    >
       <View style={[styles.habitIcon, { backgroundColor: color + '18' }]}>
         <AppText variant="title">{habit.icon ?? '✓'}</AppText>
       </View>

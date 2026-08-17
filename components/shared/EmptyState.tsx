@@ -1,17 +1,25 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, View } from 'react-native';
 
 import AppText from '@/components/ui/AppText';
-import { palette, spacing } from '@/theme';
+import { palette, radius, spacing } from '@/theme';
 
 interface Props {
   icon?: keyof typeof Ionicons.glyphMap;
   title: string;
   subtitle?: string;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
-export default function EmptyState({ icon = 'folder-open-outline', title, subtitle }: Props) {
+export default function EmptyState({
+  icon = 'folder-open-outline',
+  title,
+  subtitle,
+  actionLabel,
+  onAction,
+}: Props) {
   return (
     <View style={styles.wrap}>
       <View style={styles.iconWrap}>
@@ -24,6 +32,13 @@ export default function EmptyState({ icon = 'folder-open-outline', title, subtit
         <AppText variant="caption" style={styles.subtitle}>
           {subtitle}
         </AppText>
+      ) : null}
+      {actionLabel && onAction ? (
+        <TouchableOpacity style={styles.actionBtn} onPress={onAction} activeOpacity={0.85}>
+          <AppText variant="label" color={palette.white}>
+            {actionLabel}
+          </AppText>
+        </TouchableOpacity>
       ) : null}
     </View>
   );
@@ -42,4 +57,11 @@ const styles = StyleSheet.create({
   },
   title: { textAlign: 'center' },
   subtitle: { textAlign: 'center', maxWidth: 260 },
+  actionBtn: {
+    marginTop: spacing.sm,
+    backgroundColor: palette.primaryLight,
+    borderRadius: radius.full,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
 });

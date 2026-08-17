@@ -26,6 +26,10 @@ eas init
 
 This adds your `projectId` to `app.json` under `expo.extra.eas`.
 
+> **Required for push:** replace `YOUR_EAS_PROJECT_ID` in `app.json` → `extra.eas.projectId` (or run `eas init`). Without it, Expo push token registration is unreliable.
+
+Also set real HTTPS API URLs in `eas.json` (`preview` / `production` `EXPO_PUBLIC_API_URL`) before store builds.
+
 ## 3. Build Android App Bundle (AAB)
 
 ```bash

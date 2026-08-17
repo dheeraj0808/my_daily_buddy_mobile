@@ -35,12 +35,14 @@ import {
   verifyCurrentEmail,
   verifyNewEmail,
 } from '@/services/profileAPI';
-import type { CheckoutPayload } from '@/services/paymentAPI';
+import type { CheckoutPayload, PaymentRecord } from '@/services/paymentAPI';
+import { getPaymentConfig, listMyPayments } from '@/services/paymentAPI';
 import { finishPlanCheckout, startPlanCheckout } from '@/services/checkout';
 import type { Plan, UserSubscription } from '@/services/subscriptionAPI';
 import { changePlan, getAllPlans, getMySubscription } from '@/services/subscriptionAPI';
 import { palette, radius, spacing } from '@/theme';
 import { getErrorMessage } from '@/utils/errors';
+import { findFreePlan, isFreePlan } from '@/utils/premium';
 
 function formatDate(d: string): string {
   return new Date(d + 'T00:00:00').toLocaleDateString('en-IN', {
@@ -91,6 +93,8 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [paymentProvider, setPaymentProvider] = useState<string | null>(null);
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -108,7 +112,7 @@ export default function ProfileScreen() {
   const [uploadingImage, setUploadingImage] = useState(false);
 
   const [planModalVisible, setPlanModalVisible] = useState(false);
-  const [changingPlan, setChangingPlan] = useState(false);
+  const [changingPlanId, setChangingPlanId] = useState<string | null>(null);
   const [planChangeError, setPlanChangeError] = useState<string | null>(null);
   const [razorpayCheckout, setRazorpayCheckout] = useState<CheckoutPayload | null>(null);
 
@@ -124,11 +128,13 @@ export default function ProfileScreen() {
     else setLoading(true);
     setError(null);
 
-    const [profileRes, subRes, plansRes, avatarRes] = await Promise.allSettled([
+    const [profileRes, subRes, plansRes, avatarRes, paymentsRes, configRes] = await Promise.allSettled([
       getProfile(),
       getMySubscription(),
       getAllPlans(),
       loadProfileImageUri(),
+      listMyPayments({ page: 1, limit: 8 }),
+      getPaymentConfig(),
     ]);
 
     if (profileRes.status === 'rejected') {
@@ -144,6 +150,8 @@ export default function ProfileScreen() {
 
     setSubscription(subRes.status === 'fulfilled' ? subRes.value : null);
     setPlans(plansRes.status === 'fulfilled' ? plansRes.value : []);
+    setPayments(paymentsRes.status === 'fulfilled' ? paymentsRes.value : []);
+    setPaymentProvider(configRes.status === 'fulfilled' ? configRes.value.provider : null);
 
     if (profileRes.status === 'rejected') {
       setAvatarUri(avatarRes.status === 'fulfilled' ? avatarRes.value : null);
@@ -168,11 +176,9 @@ export default function ProfileScreen() {
   const displayName =
     [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Your Profile';
 
-  const freePlan = plans.find(
-    (p) => p.plan_code === 'FREE_PLAN' || p.name.toLowerCase().includes('free'),
-  );
+  const freePlan = findFreePlan(plans);
 
-  const isOnFreePlan = !subscription || subscription.plan?.plan_code === 'FREE_PLAN';
+  const isOnFreePlan = !subscription || isFreePlan(subscription.plan);
 
   const displayPlans = plans
     .filter((p) => p.is_active)
@@ -255,17 +261,20 @@ export default function ProfileScreen() {
 
   const handleChangePlan = async (planId: string) => {
     setPlanChangeError(null);
-    setChangingPlan(true);
+    setChangingPlanId(planId);
     try {
       const plan = plans.find((p) => p.id === planId);
-      const isFree =
-        plan?.plan_code === 'FREE_PLAN' ||
-        Number(plan?.price) === 0 ||
-        (plan?.name ?? '').toLowerCase().includes('free');
+      if (!plan) {
+        setPlanChangeError('Plan details unavailable. Pull to refresh and try again.');
+        return;
+      }
+      const planIsFree = isFreePlan(plan);
 
-      if (isFree || !plan) {
+      if (planIsFree) {
         const updated = await changePlan(planId);
         setSubscription(updated);
+        const latestPayments = await listMyPayments({ page: 1, limit: 8 }).catch(() => null);
+        if (latestPayments) setPayments(latestPayments);
         setPlanModalVisible(false);
         Alert.alert('Plan Updated', `You are now on the ${updated.plan.name} plan.`);
         return;
@@ -274,6 +283,8 @@ export default function ProfileScreen() {
       const session = await startPlanCheckout(planId);
       if (session.mode === 'mock') {
         const updated = await refreshSubscription();
+        const latestPayments = await listMyPayments({ page: 1, limit: 8 }).catch(() => null);
+        if (latestPayments) setPayments(latestPayments);
         setPlanModalVisible(false);
         Alert.alert(
           'Payment successful',
@@ -286,7 +297,7 @@ export default function ProfileScreen() {
     } catch (err) {
       setPlanChangeError(getErrorMessage(err));
     } finally {
-      setChangingPlan(false);
+      setChangingPlanId(null);
     }
   };
 
@@ -296,10 +307,12 @@ export default function ProfileScreen() {
     razorpay_signature: string;
   }) => {
     setRazorpayCheckout(null);
-    setChangingPlan(true);
+    setChangingPlanId('razorpay');
     try {
       await finishPlanCheckout(proof);
       const updated = await refreshSubscription();
+      const latestPayments = await listMyPayments({ page: 1, limit: 8 }).catch(() => null);
+      if (latestPayments) setPayments(latestPayments);
       setPlanModalVisible(false);
       Alert.alert(
         'Payment successful',
@@ -308,7 +321,7 @@ export default function ProfileScreen() {
     } catch (err) {
       setPlanChangeError(getErrorMessage(err));
     } finally {
-      setChangingPlan(false);
+      setChangingPlanId(null);
     }
   };
 
@@ -543,9 +556,21 @@ export default function ProfileScreen() {
                     )}
                   </View>
                 </View>
-                <View style={styles.activePill}>
-                  <AppText variant="caption" color={palette.success}>
-                    Active
+                <View
+                  style={[
+                    styles.activePill,
+                    {
+                      backgroundColor: subscription.is_active
+                        ? palette.success + '18'
+                        : palette.textMuted + '22',
+                    },
+                  ]}
+                >
+                  <AppText
+                    variant="caption"
+                    color={subscription.is_active ? palette.success : palette.textMuted}
+                  >
+                    {subscription.is_active ? 'Active' : 'Inactive'}
                   </AppText>
                 </View>
               </View>
@@ -605,6 +630,24 @@ export default function ProfileScreen() {
               </TouchableOpacity>
             </View>
           )}
+
+          {payments.length > 0 ? (
+            <View style={styles.paymentsBlock}>
+              <AppText variant="caption" color={palette.textMuted} style={styles.paymentsTitle}>
+                Recent payments
+              </AppText>
+              {payments.map((payment) => (
+                <View key={payment.id} style={styles.paymentRow}>
+                  <AppText variant="caption" color={palette.textSecondary} style={styles.paymentLabel}>
+                    {payment.plan?.name ?? 'Plan'} · {payment.status}
+                  </AppText>
+                  <AppText variant="caption" color={palette.text}>
+                    ₹{Number(payment.amount).toFixed(0)}
+                  </AppText>
+                </View>
+              ))}
+            </View>
+          ) : null}
         </Card>
 
         <SectionHeader title="Settings" />
@@ -722,10 +765,16 @@ export default function ProfileScreen() {
             No plans available right now.
           </AppText>
         ) : (
-          displayPlans.map((plan) => {
+          <>
+            {paymentProvider && __DEV__ ? (
+              <AppText variant="caption" color={palette.textMuted} style={styles.modalHint}>
+                Checkout provider: {paymentProvider}
+              </AppText>
+            ) : null}
+            {displayPlans.map((plan) => {
             const isCurrent = subscription?.plan_id === plan.id;
-            const isFree = plan.plan_code === 'FREE_PLAN' || Number(plan.price) === 0;
-            const showSwitchToFree = isFree && !isOnFreePlan;
+            const planIsFree = isFreePlan(plan);
+            const showSwitchToFree = planIsFree && !isOnFreePlan;
 
             return (
               <View
@@ -766,9 +815,9 @@ export default function ProfileScreen() {
                   <TouchableOpacity
                     style={showSwitchToFree ? styles.dangerOutlineBtn : styles.selectPlanBtn}
                     onPress={() => handleChangePlan(plan.id)}
-                    disabled={changingPlan}
+                    disabled={changingPlanId != null}
                   >
-                    {changingPlan ? (
+                    {changingPlanId === plan.id ? (
                       <ActivityIndicator
                         color={showSwitchToFree ? palette.error : palette.white}
                         size="small"
@@ -785,7 +834,8 @@ export default function ProfileScreen() {
                 )}
               </View>
             );
-          })
+          })}
+          </>
         )}
         {planChangeError ? (
           <AppText variant="caption" color={palette.error} style={styles.modalHint}>
@@ -933,6 +983,25 @@ const styles = StyleSheet.create({
     backgroundColor: palette.error + '08',
   },
   version: { textAlign: 'center', marginTop: spacing.md, marginBottom: spacing.xl },
+  paymentsBlock: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: palette.border,
+    gap: spacing.xs,
+  },
+  paymentsTitle: {
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  paymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  paymentLabel: { flex: 1 },
   modalHint: { marginBottom: spacing.md },
   planCard: {
     borderWidth: 1.5,

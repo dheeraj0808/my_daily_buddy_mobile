@@ -16,7 +16,8 @@ interface ButtonProps {
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  variant?: 'primary' | 'secondary' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  size?: 'md' | 'sm';
   style?: ViewStyle;
   textStyle?: TextStyle;
 }
@@ -27,23 +28,51 @@ export const Button: React.FC<ButtonProps> = ({
   loading = false,
   disabled = false,
   variant = 'primary',
+  size = 'md',
   style,
   textStyle,
 }) => {
   const isDisabled = disabled || loading;
+  const isSm = size === 'sm';
+  const heightStyle = isSm ? styles.sm : styles.md;
 
-  if (variant === 'outline') {
+  if (variant === 'outline' || variant === 'ghost') {
     return (
       <TouchableOpacity
         onPress={onPress}
         disabled={isDisabled}
-        style={[styles.base, styles.outline, isDisabled && styles.disabled, style]}
+        style={[
+          styles.base,
+          heightStyle,
+          variant === 'outline' ? styles.outline : styles.ghost,
+          isDisabled && styles.disabled,
+          style,
+        ]}
         activeOpacity={0.85}
       >
         {loading ? (
-          <ActivityIndicator color={palette.primaryLight} />
+          <ActivityIndicator color={palette.primaryLight} size={isSm ? 'small' : 'small'} />
         ) : (
-          <AppText variant="title" color={palette.primaryLight} style={textStyle}>
+          <AppText variant={isSm ? 'label' : 'title'} color={palette.primaryLight} style={textStyle}>
+            {title}
+          </AppText>
+        )}
+      </TouchableOpacity>
+    );
+  }
+
+  if (variant === 'destructive') {
+    return (
+      <TouchableOpacity
+        onPress={onPress}
+        disabled={isDisabled}
+        style={[styles.base, heightStyle, styles.destructive, isDisabled && styles.disabled, style]}
+        activeOpacity={0.85}
+      >
+        {loading ? (
+          <ActivityIndicator color={palette.white} size="small" />
+        ) : (
+          <AppText variant={isSm ? 'label' : 'title'} color={palette.white} style={textStyle}>
             {title}
           </AppText>
         )}
@@ -57,14 +86,14 @@ export const Button: React.FC<ButtonProps> = ({
     <TouchableOpacity
       onPress={onPress}
       disabled={isDisabled}
-      style={[styles.base, isDisabled && styles.disabled, style]}
+      style={[styles.base, heightStyle, isDisabled && styles.disabled, style]}
       activeOpacity={0.85}
     >
       <LinearGradient colors={[...colors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.gradient}>
         {loading ? (
-          <ActivityIndicator color={palette.white} />
+          <ActivityIndicator color={palette.white} size="small" />
         ) : (
-          <AppText variant="title" color={palette.white} style={textStyle}>
+          <AppText variant={isSm ? 'label' : 'title'} color={palette.white} style={textStyle}>
             {title}
           </AppText>
         )}
@@ -75,7 +104,6 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   base: {
-    height: 56,
     borderRadius: radius.lg,
     overflow: 'hidden',
     justifyContent: 'center',
@@ -83,6 +111,8 @@ const styles = StyleSheet.create({
     width: '100%',
     marginVertical: spacing.sm,
   },
+  md: { height: 56 },
+  sm: { height: 44, marginVertical: spacing.xs },
   gradient: {
     flex: 1,
     width: '100%',
@@ -93,6 +123,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: palette.primaryLight,
     backgroundColor: 'transparent',
+  },
+  ghost: {
+    borderWidth: 0,
+    backgroundColor: palette.surfaceMuted,
+  },
+  destructive: {
+    backgroundColor: palette.error,
   },
   disabled: { opacity: 0.55 },
 });

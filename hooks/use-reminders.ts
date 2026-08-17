@@ -49,10 +49,27 @@ export function useReminders() {
     title: string;
     remindAt: string;
     repeatType?: RepeatType;
+    repeatDays?: number[];
     linkedHabitId?: string | null;
     linkedTaskId?: string | null;
   }) => {
     await createReminder(payload);
+    await load(true);
+  };
+
+  const editReminder = async (
+    id: string,
+    payload: {
+      title?: string;
+      remindAt?: string;
+      repeatType?: RepeatType;
+      repeatDays?: number[];
+      linkedHabitId?: string | null;
+      linkedTaskId?: string | null;
+      isActive?: boolean;
+    },
+  ) => {
+    await updateReminder(id, payload);
     await load(true);
   };
 
@@ -80,6 +97,7 @@ export function useReminders() {
     refresh: () => load(true),
     toggleActive,
     addReminder,
+    editReminder,
     removeReminder,
     snooze,
     markDone,

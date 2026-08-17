@@ -44,12 +44,19 @@ export async function uploadProfileImage(uri: string): Promise<string> {
 
   formData.append('file', { uri, name: filename, type } as any);
 
-  const response = await api.post<{ data: { url: string } }>(
-    '/uploads/single',
-    formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } }
-  );
-  return response.data.data.url;
+  const response = await api.post('/uploads/single', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  const data = (response.data?.data ?? response.data) as {
+    url?: string;
+    location?: string;
+    fileUrl?: string;
+  };
+  const url = data.url ?? data.location ?? data.fileUrl;
+  if (!url) {
+    throw new Error('Upload succeeded but no file URL was returned.');
+  }
+  return url;
 }
 
 export async function saveProfileImageUri(uri: string): Promise<void> {

@@ -1,16 +1,10 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
-import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
-
 import EmptyState from '@/components/shared/EmptyState';
 import ErrorBanner from '@/components/shared/ErrorBanner';
 import FormModal, { FormField } from '@/components/shared/FormModal';
 import LoadingState from '@/components/shared/LoadingState';
 import AppText from '@/components/ui/AppText';
 import Card from '@/components/ui/Card';
-import { CheckCircle, SectionHeader } from '@/components/ui/FilterChips';
+import FilterChips, { CheckCircle, SectionHeader } from '@/components/ui/FilterChips';
 import Screen from '@/components/ui/Screen';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboard } from '@/hooks/use-dashboard';
@@ -22,9 +16,15 @@ import {
     updateTask,
     type Task,
 } from '@/services/taskAPI';
+import { getDueReminders, type Reminder } from '@/services/reminderAPI';
 import { gradients, palette, radius, shadows, spacing } from '@/theme';
 import { getErrorMessage } from '@/utils/errors';
 import { formatTime } from '@/utils/timezone';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Alert, StyleSheet, TouchableOpacity, View } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -68,11 +68,33 @@ export default function DashboardScreen() {
   const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [showAll, setShowAll] = useState(false);
+  const [taskFilter, setTaskFilter] = useState<'All' | 'Open' | 'Done'>('All');
+  const [dueReminders, setDueReminders] = useState<Reminder[]>([]);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const loadDue = useCallback(async () => {
+    try {
+      const due = await getDueReminders();
+      setDueReminders(due);
+    } catch {
+      setDueReminders([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadDue();
+  }, [loadDue, tasks.length]);
+
+  const filteredTasks = useMemo(() => {
+    if (taskFilter === 'Open') return tasks.filter((t) => !t.is_completed);
+    if (taskFilter === 'Done') return tasks.filter((t) => t.is_completed);
+    return tasks;
+  }, [tasks, taskFilter]);
 
   const done = tasks.filter((t) => t.is_completed).length;
   const total = tasks.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const visibleTasks = showAll ? tasks : tasks.slice(0, 5);
+  const visibleTasks = showAll ? filteredTasks : filteredTasks.slice(0, 5);
 
   const firstName = profile?.first_name ?? null;
   const lastName = profile?.last_name ?? null;
@@ -82,6 +104,7 @@ export default function DashboardScreen() {
     setEditingTask(null);
     setTitle('');
     setDescription('');
+    setFormError(null);
     setModalVisible(true);
   };
 
@@ -89,12 +112,17 @@ export default function DashboardScreen() {
     setEditingTask(task);
     setTitle(task.title);
     setDescription(task.description ?? '');
+    setFormError(null);
     setModalVisible(true);
   };
 
   const handleSave = async () => {
-    if (!title.trim()) return;
+    if (!title.trim()) {
+      setFormError('Title is required.');
+      return;
+    }
     setSaving(true);
+    setFormError(null);
     try {
       if (editingTask) {
         await updateTask(editingTask.id, { title: title.trim(), description: description.trim() || undefined });
@@ -104,7 +132,7 @@ export default function DashboardScreen() {
       setModalVisible(false);
       await reload();
     } catch (err) {
-      Alert.alert('Error', getErrorMessage(err));
+      setFormError(getErrorMessage(err));
     } finally {
       setSaving(false);
     }
@@ -144,7 +172,10 @@ export default function DashboardScreen() {
   return (
     <Screen
       refreshing={refreshing}
-      onRefresh={refresh}
+      onRefresh={async () => {
+        await refresh();
+        await loadDue();
+      }}
       header={
         <LinearGradient colors={[...gradients.primaryDeep]} style={styles.hero}>
           <View style={styles.heroTop}>
@@ -187,6 +218,24 @@ export default function DashboardScreen() {
     >
       {error ? <ErrorBanner message={error} onRetry={reload} /> : null}
 
+      {dueReminders.length > 0 ? (
+        <Card padded style={styles.dueCard}>
+          <View style={styles.dueHeader}>
+            <AppText variant="title">Due now</AppText>
+            <TouchableOpacity onPress={() => router.push('/(tabs)/reminders')}>
+              <AppText variant="label" color={palette.primaryLight}>
+                Open
+              </AppText>
+            </TouchableOpacity>
+          </View>
+          {dueReminders.slice(0, 3).map((r) => (
+            <AppText key={r.id} variant="body" color={palette.textSecondary}>
+              • {r.title}
+            </AppText>
+          ))}
+        </Card>
+      ) : null}
+
       <View style={styles.statsRow}>
         <Card style={styles.statCard}>
           <View style={[styles.statIcon, { backgroundColor: '#FFF7ED' }]}>
@@ -213,25 +262,46 @@ export default function DashboardScreen() {
         </TouchableOpacity>
       </View>
 
-      <SectionHeader
-        title="Today's schedule"
-        actionLabel={tasks.length > 5 ? (showAll ? 'Show less' : 'See all') : '+ Add task'}
-        onAction={() => (tasks.length > 5 ? setShowAll((v) => !v) : openCreate())}
+      <SectionHeader title="Today's schedule" actionLabel="+ Add task" onAction={openCreate} />
+
+      <FilterChips
+        options={['All', 'Open', 'Done'] as const}
+        value={taskFilter}
+        onChange={setTaskFilter}
+        accent={palette.primaryLight}
       />
+
+      {filteredTasks.length > 5 ? (
+        <TouchableOpacity
+          style={styles.seeAllRow}
+          onPress={() => setShowAll((v) => !v)}
+          activeOpacity={0.85}
+        >
+          <AppText variant="label" color={palette.primaryLight}>
+            {showAll ? 'Show less' : `See all (${filteredTasks.length})`}
+          </AppText>
+        </TouchableOpacity>
+      ) : null}
 
       {visibleTasks.length === 0 ? (
         <Card style={styles.emptyCard}>
           <EmptyState
             icon="clipboard-outline"
-            title="No tasks yet"
-            subtitle="Add your first task to start tracking your day."
+            title={
+              taskFilter === 'Done'
+                ? 'No completed tasks'
+                : taskFilter === 'Open'
+                  ? 'Nothing open'
+                  : 'No tasks yet'
+            }
+            subtitle={
+              taskFilter === 'All'
+                ? 'Add your first task to start tracking your day.'
+                : 'Try another filter or add a new task.'
+            }
+            actionLabel="+ Add task"
+            onAction={openCreate}
           />
-          <TouchableOpacity style={styles.emptyBtn} onPress={openCreate} activeOpacity={0.85}>
-            <Ionicons name="add" size={20} color={palette.white} />
-            <AppText variant="title" color={palette.white}>
-              Add task
-            </AppText>
-          </TouchableOpacity>
         </Card>
       ) : (
         visibleTasks.map((task) => (
@@ -281,6 +351,7 @@ export default function DashboardScreen() {
         onClose={() => setModalVisible(false)}
         onSubmit={handleSave}
         loading={saving}
+        error={formError}
       >
         <FormField label="Title" value={title} onChangeText={setTitle} placeholder="What needs to be done?" />
         <FormField
@@ -347,15 +418,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   emptyCard: { marginBottom: spacing.lg, alignItems: 'center' },
-  emptyBtn: {
+  seeAllRow: {
+    alignSelf: 'flex-end',
+    marginBottom: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  dueCard: { marginBottom: spacing.md, gap: spacing.xs, ...shadows.sm },
+  dueHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: palette.primaryLight,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
-    marginBottom: spacing.md,
+    marginBottom: 4,
   },
   taskCard: {
     backgroundColor: palette.surface,

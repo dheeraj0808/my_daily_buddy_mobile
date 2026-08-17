@@ -7,13 +7,18 @@ import FormModal, { FormField } from '@/components/shared/FormModal';
 import AppText from '@/components/ui/AppText';
 import { SectionHeader } from '@/components/ui/FilterChips';
 import { type GoalType, type useGoals } from '@/hooks/use-goals';
-import type { Goal } from '@/services/goalAPI';
+import {
+  listGoalProgress,
+  type Goal,
+  type GoalProgressLog,
+} from '@/services/goalAPI';
 import { palette, radius, shadows, spacing } from '@/theme';
 import { getErrorMessage } from '@/utils/errors';
 
 const GOAL_TYPES: { value: GoalType; label: string }[] = [
   { value: 'ACCUMULATE', label: 'Build up' },
   { value: 'REDUCE', label: 'Reduce' },
+  { value: 'MAINTAIN', label: 'Maintain' },
   { value: 'BOOLEAN', label: 'Yes/No' },
 ];
 
@@ -25,12 +30,26 @@ interface Props {
 }
 
 export default function GoalsPanel({ state, onAddReady }: Props) {
-  const { goals, stats, error, reload, addGoal, logProgress, removeGoal, goalProgressPercent } = state;
+  const {
+    goals,
+    stats,
+    error,
+    reload,
+    addGoal,
+    logProgress,
+    changeStatus,
+    removeGoal,
+    goalProgressPercent,
+  } = state;
 
   const [createModal, setCreateModal] = useState(false);
   const [progressModal, setProgressModal] = useState<Goal | null>(null);
+  const [historyModal, setHistoryModal] = useState<Goal | null>(null);
+  const [history, setHistory] = useState<GoalProgressLog[]>([]);
   const [title, setTitle] = useState('');
   const [target, setTarget] = useState('');
+  const [targetMin, setTargetMin] = useState('');
+  const [targetMax, setTargetMax] = useState('');
   const [goalType, setGoalType] = useState<GoalType>('ACCUMULATE');
   const [progressValue, setProgressValue] = useState('');
   const [saving, setSaving] = useState(false);
@@ -47,10 +66,17 @@ export default function GoalsPanel({ state, onAddReady }: Props) {
       if (goalType === 'ACCUMULATE' || goalType === 'REDUCE') {
         payload.targetValue = Number(target) || 100;
       }
+      if (goalType === 'MAINTAIN') {
+        payload.targetMin = Number(targetMin) || 0;
+        payload.targetMax = Number(targetMax) || 100;
+      }
       await addGoal(payload);
       setCreateModal(false);
       setTitle('');
       setTarget('');
+      setTargetMin('');
+      setTargetMax('');
+      setGoalType('ACCUMULATE');
     } catch (err) {
       Alert.alert('Error', getErrorMessage(err));
     } finally {
@@ -70,6 +96,44 @@ export default function GoalsPanel({ state, onAddReady }: Props) {
     } finally {
       setSaving(false);
     }
+  };
+
+  const openHistory = async (goal: Goal) => {
+    setHistoryModal(goal);
+    try {
+      const res = await listGoalProgress(goal.id, 20);
+      setHistory(res.data);
+    } catch (err) {
+      setHistory([]);
+      Alert.alert('Error', getErrorMessage(err));
+    }
+  };
+
+  const showGoalActions = (goal: Goal) => {
+    Alert.alert(goal.title, 'Choose an action', [
+      { text: 'Log progress', onPress: () => setProgressModal(goal) },
+      { text: 'Progress history', onPress: () => openHistory(goal) },
+      {
+        text: 'Pause',
+        onPress: () =>
+          changeStatus(goal.id, 'PAUSED').catch((err) => Alert.alert('Error', getErrorMessage(err))),
+      },
+      {
+        text: 'Abandon',
+        style: 'destructive',
+        onPress: () =>
+          changeStatus(goal.id, 'ABANDONED').catch((err) =>
+            Alert.alert('Error', getErrorMessage(err)),
+          ),
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () =>
+          removeGoal(goal.id).catch((err) => Alert.alert('Error', getErrorMessage(err))),
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   return (
@@ -103,17 +167,7 @@ export default function GoalsPanel({ state, onAddReady }: Props) {
               key={goal.id}
               style={styles.goalCard}
               onPress={() => setProgressModal(goal)}
-              onLongPress={() =>
-                Alert.alert('Delete goal', `Remove "${goal.title}"?`, [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Delete',
-                    style: 'destructive',
-                    onPress: () =>
-                      removeGoal(goal.id).catch((err) => Alert.alert('Error', getErrorMessage(err))),
-                  },
-                ])
-              }
+              onLongPress={() => showGoalActions(goal)}
             >
               <View style={styles.goalHeader}>
                 <AppText variant="title" style={styles.goalTitle}>
@@ -129,16 +183,25 @@ export default function GoalsPanel({ state, onAddReady }: Props) {
                 <View style={[styles.progressFill, { width: `${pct}%` }]} />
               </View>
               <AppText variant="caption">
-                {goal.current_value}
-                {goal.unit ? ` ${goal.unit}` : ''}
-                {goal.target_value != null ? ` / ${goal.target_value}` : ''} · {pct}%
+                {goal.goal_type === 'MAINTAIN'
+                  ? `${goal.current_value}${goal.unit ? ` ${goal.unit}` : ''} (band ${goal.target_min}–${goal.target_max})`
+                  : `${goal.current_value}${goal.unit ? ` ${goal.unit}` : ''}${
+                      goal.target_value != null ? ` / ${goal.target_value}` : ''
+                    }`}{' '}
+                · {pct}%
               </AppText>
             </TouchableOpacity>
           );
         })
       )}
 
-      <FormModal visible={createModal} title="New goal" onClose={() => setCreateModal(false)} onSubmit={handleCreate} loading={saving}>
+      <FormModal
+        visible={createModal}
+        title="New goal"
+        onClose={() => setCreateModal(false)}
+        onSubmit={handleCreate}
+        loading={saving}
+      >
         <FormField label="Title" value={title} onChangeText={setTitle} placeholder="Run a marathon" />
         <AppText variant="label" style={styles.fieldLabel}>
           Type
@@ -159,6 +222,12 @@ export default function GoalsPanel({ state, onAddReady }: Props) {
         {(goalType === 'ACCUMULATE' || goalType === 'REDUCE') && (
           <FormField label="Target value" value={target} onChangeText={setTarget} placeholder="100" />
         )}
+        {goalType === 'MAINTAIN' ? (
+          <>
+            <FormField label="Min value" value={targetMin} onChangeText={setTargetMin} placeholder="60" />
+            <FormField label="Max value" value={targetMax} onChangeText={setTargetMax} placeholder="70" />
+          </>
+        ) : null}
       </FormModal>
 
       <FormModal
@@ -174,6 +243,31 @@ export default function GoalsPanel({ state, onAddReady }: Props) {
           onChangeText={setProgressValue}
           placeholder="10"
         />
+      </FormModal>
+
+      <FormModal
+        visible={!!historyModal}
+        title={historyModal ? `${historyModal.title} history` : 'Progress history'}
+        onClose={() => {
+          setHistoryModal(null);
+          setHistory([]);
+        }}
+        hideSubmit
+      >
+        {history.length === 0 ? (
+          <AppText variant="body" color={palette.textSecondary}>
+            No progress logs yet.
+          </AppText>
+        ) : (
+          history.map((log) => (
+            <View key={log.id} style={styles.historyRow}>
+              <AppText variant="title">{log.value}</AppText>
+              <AppText variant="caption" color={palette.textMuted}>
+                {new Date(log.created_at).toLocaleString()}
+              </AppText>
+            </View>
+          ))
+        )}
       </FormModal>
     </>
   );
@@ -211,4 +305,10 @@ const styles = StyleSheet.create({
     borderColor: palette.border,
   },
   typeChipActive: { backgroundColor: palette.secondary, borderColor: palette.secondary },
+  historyRow: {
+    paddingVertical: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: palette.border,
+    gap: 2,
+  },
 });
