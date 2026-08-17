@@ -83,6 +83,23 @@ export async function applyProgress(id: string, value: number): Promise<{ goal: 
   return unwrapData<{ goal: Goal }>(response);
 }
 
+export interface GoalProgressLog {
+  id: string;
+  goal_id: string;
+  value: number;
+  previous_value?: number;
+  note?: string | null;
+  created_at: string;
+}
+
+export async function listGoalProgress(
+  id: string,
+  limit = 20,
+): Promise<PaginatedResponse<GoalProgressLog>> {
+  const response = await api.get(`/goals/${id}/progress`, { params: { limit } });
+  return unwrapPaginated<GoalProgressLog>(response);
+}
+
 export function goalProgressPercent(goal: Goal): number {
   if (goal.goal_type === 'BOOLEAN') {
     return goal.current_value >= 1 ? 100 : 0;

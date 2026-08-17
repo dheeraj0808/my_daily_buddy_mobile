@@ -122,7 +122,7 @@ export default function LandingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FF',
+    backgroundColor: palette.background,
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingBottom: spacing.lg,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  featureLabel: { textAlign: 'center', fontFamily: undefined },
+  featureLabel: { textAlign: 'center' },
   footer: { width: '100%', paddingHorizontal: spacing.lg },
   getStartedBtn: {
     height: 56,

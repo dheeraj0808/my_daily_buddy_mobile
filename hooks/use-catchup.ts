@@ -3,8 +3,10 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   applyCatchupChoice,
   createCatchupDraft,
+  getCatchupAdjustments,
   listCatchupPlans,
   type CatchupPlan,
+  type HabitAdjustment,
 } from '@/services/catchupAPI';
 import { getErrorMessage, isAuthError } from '@/utils/errors';
 
@@ -15,6 +17,16 @@ export function useCatchUp() {
   const [error, setError] = useState<string | null>(null);
   const [premiumRequired, setPremiumRequired] = useState(false);
 
+  const enrichPlan = async (plan: CatchupPlan): Promise<CatchupPlan> => {
+    if (plan.adjustments?.length) return plan;
+    try {
+      const adjustments = await getCatchupAdjustments(plan.id);
+      return { ...plan, adjustments };
+    } catch {
+      return plan;
+    }
+  };
+
   const load = useCallback(async (isRefresh = false) => {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
@@ -23,7 +35,8 @@ export function useCatchUp() {
 
     try {
       const res = await listCatchupPlans();
-      setPlans(res.data);
+      const enriched = await Promise.all(res.data.map(enrichPlan));
+      setPlans(enriched);
     } catch (err: unknown) {
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status === 403) {
@@ -57,6 +70,8 @@ export function useCatchUp() {
     await load(true);
   };
 
+  const getPlanAdjustments = (plan: CatchupPlan): HabitAdjustment[] => plan.adjustments ?? [];
+
   return {
     plans,
     loading,
@@ -68,5 +83,6 @@ export function useCatchUp() {
     generateDraft,
     acceptPlan,
     rejectPlan,
+    getPlanAdjustments,
   };
 }

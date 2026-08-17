@@ -3,8 +3,9 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 
 import { getProfile, type UserProfile } from '@/services/profileAPI';
 import { storage } from '@/utils/storage';
-import { isAuthError } from '@/utils/errors';
+import { isAuthError, isNetworkError } from '@/utils/errors';
 import { onSessionExpired } from '@/utils/sessionEvents';
+import { useNotificationRouting } from '@/hooks/use-notification-routing';
 import { usePushNotifications } from '@/hooks/use-push-notifications';
 
 interface AuthContextValue {
@@ -37,9 +38,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       if (isAuthError(err)) {
         await signOut();
-      } else {
-        setProfile(null);
+        return;
       }
+      // Keep session when tokens exist but network/API blips — don't treat as logout.
+      if (isNetworkError(err)) {
+        const token = await storage.getToken();
+        if (token) {
+          setIsAuthenticated(true);
+          return;
+        }
+      }
+      setProfile(null);
     }
   }, [signOut]);
 
@@ -51,6 +60,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setIsAuthenticated(false);
           return;
         }
+        // Optimistic auth while profile loads — avoids cold-start "logged out" flash.
+        setIsAuthenticated(true);
         await refreshProfile();
       } finally {
         setIsReady(true);
@@ -67,7 +78,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, [signOut]);
 
-  usePushNotifications(isReady && isAuthenticated);
+  const pushEnabled = isReady && isAuthenticated;
+  usePushNotifications(pushEnabled);
+  useNotificationRouting(pushEnabled);
 
   const value = useMemo(
     () => ({

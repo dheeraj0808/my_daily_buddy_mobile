@@ -78,9 +78,7 @@ export default function TrackScreen() {
     else if (isGoals) openGoalsAdd.current();
   };
 
-  if (activeState?.loading && !activeState.refreshing) {
-    return <LoadingState />;
-  }
+  const panelLoading = Boolean(activeState?.loading && !activeState.refreshing);
 
   return (
     <Screen
@@ -106,7 +104,9 @@ export default function TrackScreen() {
         />
       </View>
 
-      {isHabits ? (
+      {panelLoading ? (
+        <LoadingState message="Loading…" inline />
+      ) : isHabits ? (
         <HabitsPanel state={habitsState} onAddReady={registerHabitsAdd} />
       ) : isGoals ? (
         <GoalsPanel state={goalsState} onAddReady={registerGoalsAdd} />

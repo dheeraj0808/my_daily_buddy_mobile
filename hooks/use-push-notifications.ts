@@ -3,6 +3,7 @@ import * as Notifications from 'expo-notifications';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
 
+import { getExpoProjectId } from '@/hooks/use-notification-routing';
 import { registerDeviceToken, type DevicePlatform } from '@/services/notificationAPI';
 
 Notifications.setNotificationHandler({
@@ -41,11 +42,21 @@ async function obtainPushToken(): Promise<string | null> {
   }
 
   try {
-    const expoToken = await Notifications.getExpoPushTokenAsync();
+    const projectId = getExpoProjectId();
+    const expoToken = await Notifications.getExpoPushTokenAsync(
+      projectId ? { projectId } : undefined,
+    );
     return expoToken.data;
-  } catch {
-    const deviceToken = await Notifications.getDevicePushTokenAsync();
-    return typeof deviceToken.data === 'string' ? deviceToken.data : String(deviceToken.data);
+  } catch (err) {
+    if (__DEV__) {
+      console.warn('[Push] Expo push token failed, falling back to device token:', err);
+    }
+    try {
+      const deviceToken = await Notifications.getDevicePushTokenAsync();
+      return typeof deviceToken.data === 'string' ? deviceToken.data : String(deviceToken.data);
+    } catch {
+      return null;
+    }
   }
 }
 

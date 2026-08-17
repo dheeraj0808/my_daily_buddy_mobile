@@ -51,7 +51,21 @@ export default function VerifyOtpScreen() {
   const isComplete = fullOtp.length === OTP_LENGTH;
 
   const handleChange = (value: string, index: number) => {
-    const digit = value.replace(/[^0-9]/g, '').slice(-1);
+    const digits = value.replace(/[^0-9]/g, '');
+    // Support paste of full OTP into any box.
+    if (digits.length > 1) {
+      const chars = digits.slice(0, OTP_LENGTH).split('');
+      const next = Array(OTP_LENGTH)
+        .fill('')
+        .map((_, i) => chars[i] ?? '');
+      setOtp(next);
+      setError('');
+      const focusAt = Math.min(chars.length, OTP_LENGTH - 1);
+      inputRefs.current[focusAt]?.focus();
+      setFocusedIndex(focusAt);
+      return;
+    }
+    const digit = digits.slice(-1);
     const next = [...otp];
     next[index] = digit;
     setOtp(next);
@@ -182,9 +196,11 @@ export default function VerifyOtpScreen() {
                 onKeyPress={(e) => handleKeyPress(e, index)}
                 onFocus={() => setFocusedIndex(index)}
                 keyboardType="number-pad"
-                maxLength={1}
+                maxLength={index === 0 ? OTP_LENGTH : 1}
                 textAlign="center"
                 selectTextOnFocus
+                textContentType="oneTimeCode"
+                autoComplete="sms-otp"
               />
             ))}
           </View>

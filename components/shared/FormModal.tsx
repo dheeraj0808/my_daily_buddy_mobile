@@ -21,6 +21,7 @@ interface Props {
   submitLabel?: string;
   loading?: boolean;
   hideSubmit?: boolean;
+  error?: string | null;
   children: React.ReactNode;
 }
 
@@ -32,6 +33,7 @@ export default function FormModal({
   submitLabel = 'Save',
   loading,
   hideSubmit,
+  error,
   children,
 }: Props) {
   const handleClose = () => {
@@ -54,6 +56,13 @@ export default function FormModal({
           </View>
           <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {children}
+            {error ? (
+              <View style={styles.errorBanner}>
+                <AppText variant="caption" color={palette.error}>
+                  {error}
+                </AppText>
+              </View>
+            ) : null}
           </ScrollView>
           {!hideSubmit && onSubmit ? (
             <TouchableOpacity
@@ -158,4 +167,12 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   submitDisabled: { opacity: 0.6 },
+  errorBanner: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    marginBottom: spacing.sm,
+  },
 });

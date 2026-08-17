@@ -1,5 +1,5 @@
 import api from './api';
-import { unwrapData } from './types';
+import { unwrapData, unwrapPaginated } from './types';
 import { getDeviceTimezone } from '@/utils/timezone';
 
 export interface BodyMetric {
@@ -38,4 +38,26 @@ export async function logBodyMetric(payload: {
     tz: getDeviceTimezone(),
   });
   return unwrapData<BodyMetric>(response);
+}
+
+export async function listBodyMetrics(params?: {
+  page?: number;
+  limit?: number;
+}): Promise<BodyMetric[]> {
+  const response = await api.get('/health/metrics', {
+    params: { page: params?.page ?? 1, limit: params?.limit ?? 20 },
+  });
+  return unwrapPaginated<BodyMetric>(response).data;
+}
+
+export async function updateBodyMetric(
+  id: string,
+  payload: { weightKg?: number; heightCm?: number; note?: string },
+): Promise<BodyMetric> {
+  const response = await api.patch(`/health/metrics/${id}`, payload);
+  return unwrapData<BodyMetric>(response);
+}
+
+export async function deleteBodyMetric(id: string): Promise<void> {
+  await api.delete(`/health/metrics/${id}`);
 }

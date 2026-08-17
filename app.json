@@ -12,7 +12,10 @@
     "primaryColor": "#6366F1",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mydailybuddy.app"
+      "bundleIdentifier": "com.mydailybuddy.app",
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"]
+      }
     },
     "android": {
       "package": "com.mydailybuddy.app",
@@ -27,7 +30,10 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "INTERNET",
-        "VIBRATE"
+        "VIBRATE",
+        "POST_NOTIFICATIONS",
+        "RECEIVE_BOOT_COMPLETED",
+        "SCHEDULE_EXACT_ALARM"
       ]
     },
     "web": {
@@ -81,6 +87,9 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
       }
     }
   }

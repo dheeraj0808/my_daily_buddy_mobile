@@ -31,7 +31,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#FEF2F2',
     borderRadius: radius.lg,
     padding: spacing.md,
-    marginHorizontal: spacing.lg,
     marginBottom: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
